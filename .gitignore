@@ -1,0 +1,4 @@
+production
+update_oslab_template.yaml
+.vault_password
+group_vars/

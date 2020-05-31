@@ -1,0 +1,46 @@
+---
+# Note the values for the guest info ignition properties must be substituted
+# These values are place holders
+- name: Set Ingite parameters
+  hosts: localhost
+  gather_facts: no
+  tasks:
+  - name: Set guestinfo.ignition.config.data for RHCOS-bootstrap
+    vmware_guest:
+      hostname: "{{ vsphere_address }}"
+      username: "{{ vsphere_username }}"
+      password: "{{ vsphere_password }}"
+      validate_certs: no
+      folder: "{{ ocp_vsphere_folder }}"
+      name: "RHCOS-bootstrap"
+      customvalues:
+      - key: guestinfo.ignition.config.data 
+        value: GUESTINFOBOOTSTRAP
+    delegate_to: localhost
+    register: deploy
+  - name: Set guestinfo.ignition.config.data for RHCOS-master
+    vmware_guest:
+      hostname: "{{ vsphere_address }}"
+      username: "{{ vsphere_username }}"
+      password: "{{ vsphere_password }}"
+      validate_certs: no
+      folder: "{{ ocp_vsphere_folder }}"
+      name: "RHCOS-master"
+      customvalues:
+      - key: guestinfo.ignition.config.data 
+        value: GUESTINFOMASTER
+    delegate_to: localhost
+    register: deploy
+  - name: Set guestinfo.ignition.config.data for RHCOS-worker
+    vmware_guest:
+      hostname: "{{ vsphere_address }}"
+      username: "{{ vsphere_username }}"
+      password: "{{ vsphere_password }}"
+      validate_certs: no
+      folder: "{{ ocp_vsphere_folder }}"
+      name: "RHCOS-worker"
+      customvalues:
+      - key: guestinfo.ignition.config.data 
+        value: GUESTINFOWORKER
+    delegate_to: localhost
+    register: deploy

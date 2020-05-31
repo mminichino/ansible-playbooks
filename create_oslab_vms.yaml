@@ -1,0 +1,22 @@
+---
+- name: Create oslab VMs
+  hosts: localhost
+  gather_facts: no
+  tasks:
+  - name: Create oslab VMs
+    vmware_guest:
+      hostname: "{{ vsphere_address }}"
+      username: "{{ vsphere_username }}"
+      password: "{{ vsphere_password }}"
+      validate_certs: no
+      folder: "{{ ocp_vsphere_vm_folder }}"
+      name: "{{ item.name }}"
+      template: "{{ item.template }}"
+      datacenter: "{{ vsphere_datacenter }}"
+      state: poweredoff
+      datastore: "{{ oslab_datastore }}"
+      esxi_hostname: "{{ esx2_host }}"
+    delegate_to: localhost
+    register: deploy
+    with_items:
+      - "{{ oslab_host_list }}"

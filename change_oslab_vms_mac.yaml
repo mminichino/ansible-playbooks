@@ -1,0 +1,23 @@
+---
+- name: Change oslab VM MACs
+  hosts: localhost
+  gather_facts: no
+  tasks:
+  - name: Change VM MAC Addresses
+    vmware_guest_network:
+      hostname: "{{ vsphere_address }}"
+      username: "{{ vsphere_username }}"
+      password: "{{ vsphere_password }}"
+      validate_certs: no
+      folder: "{{ ocp_vsphere_vm_folder }}"
+      name: "{{ item.name }}"
+      datacenter: "{{ vsphere_datacenter }}"
+      esxi_hostname: "{{ esx2_host }}"
+      networks:
+      - label: "Network adapter 1"
+        state: present
+        manual_mac: "{{ item.mac }}"
+    delegate_to: localhost
+    register: deploy
+    with_items:
+      - "{{ oslab_host_list }}"

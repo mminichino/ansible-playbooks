@@ -1,0 +1,8 @@
+---
+- hosts: router
+  gather_facts: no
+  serial: 1
+  tasks:
+    - name: Halt System
+      shell: /sbin/shutdown -h now
+

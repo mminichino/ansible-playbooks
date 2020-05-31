@@ -1,0 +1,25 @@
+---
+# Note pass sg_node_name and sg_node_vm_name via --extra-vars
+- hosts: "{{ sg_node_name }}"
+  gather_facts: no
+  serial: 1
+  tasks:
+    - name: stop services
+      command: service servermanager stop
+      become: true
+      become_user: root
+- name: Restart SG VM
+  hosts: localhost
+  gather_facts: no
+  tasks:
+    - name: Set the state of SG Node to restart
+      vmware_guest_powerstate:
+        hostname: "{{ vsphere_address }}"
+        username: "{{ vsphere_username }}"
+        password: "{{ vsphere_password }}"
+        validate_certs: no
+        folder: "{{ lab_vsphere_folder }}"
+        name: "{{ sg_node_vm_name }}"
+        state: reboot-guest
+      delegate_to: localhost
+      register: deploy

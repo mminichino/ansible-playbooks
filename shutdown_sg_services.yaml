@@ -1,0 +1,10 @@
+---
+- hosts: storagegrid
+  gather_facts: no
+  serial: 1
+  tasks:
+    - name: stop services
+      command: service servermanager stop
+      become: true
+      become_user: root
+

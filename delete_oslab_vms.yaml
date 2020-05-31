@@ -1,0 +1,19 @@
+---
+- name: Delete oslab VMs
+  hosts: localhost
+  gather_facts: no
+  tasks:
+  - name: Delete oslab VMs
+    vmware_guest:
+      hostname: "{{ vsphere_address }}"
+      username: "{{ vsphere_username }}"
+      password: "{{ vsphere_password }}"
+      validate_certs: no
+      folder: "{{ ocp_vsphere_vm_folder }}"
+      name: "{{ item.name }}"
+      datacenter: "{{ vsphere_datacenter }}"
+      state: absent
+    delegate_to: localhost
+    register: deploy
+    with_items:
+      - "{{ oslab_host_list }}"

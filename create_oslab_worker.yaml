@@ -1,0 +1,24 @@
+---
+# Supply ocp_host_name via --extra-vars
+- name: Create oslab Worker VM
+  hosts: localhost
+  gather_facts: no
+  tasks:
+  - name: Create oslab VM
+    vmware_guest:
+      hostname: "{{ vsphere_address }}"
+      username: "{{ vsphere_username }}"
+      password: "{{ vsphere_password }}"
+      validate_certs: no
+      folder: "{{ ocp_vsphere_vm_folder }}"
+      name: "{{ ocp_host_name }}"
+      template: "{{ item.template }}"
+      datacenter: "{{ vsphere_datacenter }}"
+      state: poweredoff
+      datastore: "{{ oslab_datastore }}"
+      esxi_hostname: "{{ esx2_host }}"
+    delegate_to: localhost
+    register: deploy
+    when: item.name == ocp_host_name
+    with_items:
+      - "{{ oslab_host_list }}"

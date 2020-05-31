@@ -1,0 +1,21 @@
+---
+- name: Get oslab VM info
+  hosts: localhost
+  gather_facts: no
+  tasks:
+  - name: Get VM info
+    vmware_guest_info:
+      hostname: "{{ vsphere_address }}"
+      username: "{{ vsphere_username }}"
+      password: "{{ vsphere_password }}"
+      validate_certs: no
+      folder: "{{ ocp_vsphere_vm_folder }}"
+      name: "{{ item.name }}"
+      datacenter: "{{ vsphere_datacenter }}"
+    delegate_to: localhost
+    register: vm_facts
+    with_items:
+      - "{{ oslab_host_list }}"
+
+  - debug:
+      var: vm_facts

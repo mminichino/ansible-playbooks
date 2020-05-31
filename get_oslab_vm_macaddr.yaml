@@ -1,0 +1,25 @@
+---
+- name: Get oslab VM MAC Addresses
+  hosts: localhost
+  gather_facts: no
+  tasks:
+  - name: Get MAC Address 
+    vmware_guest_info:
+      hostname: "{{ vsphere_address }}"
+      username: "{{ vsphere_username }}"
+      password: "{{ vsphere_password }}"
+      validate_certs: no
+      folder: "{{ ocp_vsphere_vm_folder }}"
+      name: "{{ item.name }}"
+      datacenter: "{{ vsphere_datacenter }}"
+    delegate_to: localhost
+    register: vm_info
+    with_items:
+      - "{{ oslab_host_list }}"
+
+  - debug:
+      msg: "OK"
+    when: item[0].instance.hw_eth0.macaddress == item[1].mac
+    with_nested:
+      - "{{ vm_info.results }}"
+      - "{{ oslab_host_list }}"

@@ -1,0 +1,18 @@
+---
+- name: Start k8s VMs
+  hosts: localhost
+  gather_facts: no
+  tasks:
+  - name: Set the state of kube hosts to poweron
+    vmware_guest_powerstate:
+      hostname: "{{ vsphere_address }}"
+      username: "{{ vsphere_username }}"
+      password: "{{ vsphere_password }}"
+      validate_certs: no
+      folder: "{{ lab_vsphere_folder }}"
+      name: "{{ item }}"
+      state: powered-on
+    delegate_to: localhost
+    register: deploy
+    with_items:
+      - "{{ kube_hosts }}"

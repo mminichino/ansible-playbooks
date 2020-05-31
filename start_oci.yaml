@@ -1,0 +1,27 @@
+---
+- name: Start OCI
+  hosts: localhost
+  gather_facts: no
+  tasks:
+  - name: Set the state of oci server to power on
+    vmware_guest_powerstate:
+      hostname: "{{ vsphere_address }}"
+      username: "{{ vsphere_username }}"
+      password: "{{ vsphere_password }}"
+      validate_certs: no
+      folder: "{{ lab_vsphere_folder }}"
+      name: "{{ oci_server }}"
+      state: powered-on
+    delegate_to: localhost
+    register: deploy
+  - name: Set the state of oci DWH server to power on
+    vmware_guest_powerstate:
+      hostname: "{{ vsphere_address }}"
+      username: "{{ vsphere_username }}"
+      password: "{{ vsphere_password }}"
+      validate_certs: no
+      folder: "{{ lab_vsphere_folder }}"
+      name: "{{ oci_warehouse_server }}"
+      state: powered-on
+    delegate_to: localhost
+    register: deploy

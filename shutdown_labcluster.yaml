@@ -1,0 +1,17 @@
+---
+- hosts: localhost
+  name: Node Shutdown
+  vars:
+    hostname: "{{ labcluster_hostname }}"
+    username: "{{ ontap_admin_user }}"
+    password: "{{ admin_password }}"
+  tasks:
+    - name: Shutdown
+      na_ontap_command:
+        hostname: "{{ hostname }}"
+        username: "{{ username }}"
+        password: "{{ password }}"
+        command: ['system', 'node', 'halt', '-node', '{{ labcluster_node_name }}']
+        privilege: 'advanced'
+        https: true
+        validate_certs: false

@@ -1,0 +1,19 @@
+---
+- name: Stop OpenShift Bootstrap VM
+  hosts: localhost
+  gather_facts: no
+  tasks:
+  - name: Set the state of bootstrap node to power off
+    vmware_guest_powerstate:
+      hostname: "{{ vsphere_address }}"
+      username: "{{ vsphere_username }}"
+      password: "{{ vsphere_password }}"
+      validate_certs: no
+      folder: "{{ ocp_vsphere_folder }}"
+      name: "{{ item.name }}"
+      state: shutdown-guest
+    delegate_to: localhost
+    register: deploy
+    when: item.template == "RHCOS-bootstrap"
+    with_items:
+      - "{{ oslab_host_list }}"
