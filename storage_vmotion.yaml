@@ -1,0 +1,22 @@
+---
+#
+# var:vm_name
+# var:vm_datastore
+#
+- name: Storage VMotion
+  hosts: localhost
+  gather_facts: no
+  vars:
+    vm_name: host
+    vm_datastore: datastore
+  tasks:
+  - name: Datastore VMotion
+    vmware_vmotion:
+      hostname: "{{ vsphere_address }}"
+      username: "{{ vsphere_username }}"
+      password: "{{ vsphere_password }}"
+      validate_certs: no
+      vm_name: "{{ vm_name }}"
+      destination_datastore: "{{ vm_datastore }}"
+    delegate_to: localhost
+    register: deploy
