@@ -1,12 +1,24 @@
 #!/bin/sh
 #
 function print_usage () {
-   echo "$0 file.yaml var1 var2 ..."
+   echo "$0 [-c] file.yaml var1 var2 ..."
    exit 1
 }
+extra_args=""
+ansible_args=""
+
+while getopts ':c' optargs
+do
+    case "${optargs}" in
+        c) extra_args='--check'
+           ;;
+       \?) print_usage
+           ;;
+    esac
+done
+shift $((OPTIND-1))
 
 yaml_file=$1; shift
-ansible_args=""
 
 if [ -z "$yaml_file" ]
 then
@@ -38,4 +50,4 @@ then
    exit 1
 fi
 
-/usr/bin/ansible-playbook $yaml_file --extra-vars "{${ansible_args}}"
+/usr/bin/ansible-playbook $yaml_file --extra-vars "{${ansible_args}}" $extra_args

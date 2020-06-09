@@ -1,0 +1,40 @@
+---
+#
+# var:cluster_admin_ip
+# var:vol_name
+# var:svm_name
+# var:mount_point
+# var:host_group
+#
+- hosts: "{{ host_group if host_group is defined else 'production' }}"
+  serial: 1
+  vars:
+    mount: "{{ mount_point if mount_point is defined else '/mnt' }}"
+  tasks:
+    - name: Remove nfs mount from host
+      become: true
+      become_user: root
+      mount: 
+        state: absent
+        path: "{{ mount }}"
+        fstype: nfs
+- hosts: localhost
+  gather_facts: no
+  name: Mount NFS Volume
+  vars:
+    hostname: "{{ cluster_admin_ip }}"
+    username: "{{ admin_user }}"
+    password: "{{ admin_password }}"
+    volume: "{{ vol_name if vol_name is defined else 'nfsvol' }}"
+    vserver: "{{ svm_name if svm_name is defined else 'svm0' }}"
+  tasks:
+    - name: Delete volume
+      na_ontap_volume:
+        hostname: "{{ hostname }}"
+        username: "{{ username }}"
+        password: "{{ password }}"
+        https: true
+        validate_certs: false
+        state: absent
+        name: "{{ volume }}" 
+        vserver: "{{ vserver }}"

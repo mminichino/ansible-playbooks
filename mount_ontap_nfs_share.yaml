@@ -1,0 +1,71 @@
+---
+#
+# var:cluster_admin_ip
+# var:vol_aggregate
+# var:vol_name
+# var:vol_size
+# var:export_policy
+# var:svm_name
+# var:mount_point
+# var:mount_owner
+# var:mount_group
+# var:nfs_lif
+# var:nfs_options
+# var:host_group
+#
+- hosts: localhost
+  gather_facts: no
+  name: Mount NFS Volume
+  vars:
+    hostname: "{{ cluster_admin_ip }}"
+    username: "{{ admin_user }}"
+    password: "{{ admin_password }}"
+    aggr: "{{ vol_aggregate if vol_aggregate is defined else 'aggr1' }}"
+    volume: "{{ vol_name if vol_name is defined else 'nfsvol' }}"
+    size: "{{ vol_size if vol_size is defined else '10' }}"
+    vserver: "{{ svm_name if svm_name is defined else 'svm0' }}"
+    policy: "{{ export_policy if export_policy is defined else 'default' }}"
+  tasks:
+    - name: Create Volume
+      na_ontap_volume:
+        hostname: "{{ hostname }}"
+        username: "{{ username }}"
+        password: "{{ password }}"
+        https: true
+        validate_certs: false
+        state: present
+        name: "{{ volume }}" 
+        aggregate_name: "{{ aggr }}" 
+        size: "{{ size }}"
+        size_unit: gb 
+        policy: "{{ policy }}"
+        junction_path: "/{{ volume }}" 
+        space_guarantee: "none" 
+        vserver: "{{ vserver }}"
+- hosts: "{{ host_group if host_group is defined else 'production' }}"
+  serial: 1
+  vars:
+    lif: "{{ nfs_lif if nfs_lif is defined else cluster_admin_ip }}"
+    volume: "{{ vol_name if vol_name is defined else 'nfsvol' }}"
+    mount: "{{ mount_point if mount_point is defined else '/mnt' }}"
+    owner: "{{ mount_owner if mount_owner is defined else 'root' }}"
+    group: "{{ mount_group if mount_group is defined else 'root' }}"
+    options: "{{ nfs_options if nfs_options is defined else 'rw,bg,hard,nointr,rsize=32768,wsize=32768,tcp,actimeo=0,vers=3,timeo=600' }}"
+  tasks:
+    - name: Mount nfs export 
+      become: true
+      become_user: root
+      mount: 
+        state: mounted
+        path: "{{ mount }}"
+        src: "{{ lif }}:/{{ volume }}" 
+        opts: "{{ options }}"
+        fstype: nfs
+    - name: Set mount point owner and group
+      become: true
+      become_user: root
+      file: 
+        path: "{{ mount }}"
+        owner: "{{ owner }}"
+        group: "{{ group }}"
+        state: directory 
