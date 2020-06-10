@@ -9,3 +9,23 @@ $ cd playbooks
 $ git clone mminichino/ansible-playbooks
 $ ./ansible-helper.py mount_ontap_nfs_share.yaml --cluster_admin_ip w.x.y.z --vol_aggregate aggr1 --vol_size 100 --svm_name svm0 --nfs_lif w.x.y.z --mount_point /u01 --mount_owner oracle --mount_group dba --vol_name orabin --host_group database
 ````
+
+To see supported variables, use the print option:
+
+````
+$ ./ansible-helper.py mount_ontap_nfs_share.yaml -p
+--cluster_admin_ip
+--vol_aggregate
+--vol_name
+--vol_size
+--export_policy
+--svm_name
+--mount_point
+--mount_owner
+--mount_group
+--nfs_lif
+--nfs_options
+--host_group
+````
+
+To see verbose Ansible output, use the -d option, and to do a dry run use the -c option.
