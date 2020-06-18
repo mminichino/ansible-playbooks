@@ -1,0 +1,101 @@
+---
+#
+# var:cluster_admin_ip
+# var:tmp_aggregate
+# var:vol_name
+# var:svm_name
+# var:check_retries
+# var:check_wait
+#
+- hosts: localhost
+  gather_facts: no
+  name: Get Volume Info
+  vars:
+    hostname: "{{ cluster_admin_ip }}"
+    username: "{{ admin_user }}"
+    password: "{{ admin_password }}"
+    tmp_aggr: "{{ tmp_aggregate if vol_aggregate is defined else 'aggr2' }}"
+    volume: "{{ vol_name if vol_name is defined else 'nfsvol' }}"
+    vserver: "{{ svm_name if svm_name is defined else 'svm0' }}"
+    query_var: "{{ 'ontap_info.volume_info.\"' + volume + ':' + vserver + '\".volume_id_attributes.containing_aggregate_name' }}"
+    orig_aggr: "{{ filer | json_query(query_var) }}"
+    check_num: "{{ check_retries if check_retries is defined else 10 }}"
+    wait_num: "{{ check_wait if check_wait is defined else 5 }}"
+  tasks:
+    - name: Get Volume Info
+      na_ontap_info:
+        state: info
+        hostname: "{{ hostname }}"
+        username: "{{ username }}"
+        password: "{{ password }}"
+        https: true
+        validate_certs: false
+        gather_subset:
+          - volume_info
+      register: filer
+    - name: Print Debug
+      debug:
+         msg: "Original aggregate: {{ orig_aggr }}"
+    - name: Set Tiering Policy
+      na_ontap_volume:
+        hostname: "{{ hostname }}"
+        username: "{{ username }}"
+        password: "{{ password }}"
+        https: true
+        validate_certs: false
+        state: present
+        name: "{{ volume }}" 
+        tiering_policy: none
+        wait_for_completion: true
+        vserver: "{{ vserver }}"
+    - name: Move Volume to Temp Aggregate
+      na_ontap_volume:
+        hostname: "{{ hostname }}"
+        username: "{{ username }}"
+        password: "{{ password }}"
+        https: true
+        validate_certs: false
+        state: present
+        name: "{{ volume }}" 
+        aggregate_name: "{{ tmp_aggr }}" 
+        wait_for_completion: true
+        vserver: "{{ vserver }}"
+    - name: Check Aggregate Status
+      na_ontap_info:
+        state: info
+        hostname: "{{ hostname }}"
+        username: "{{ username }}"
+        password: "{{ password }}"
+        https: true
+        validate_certs: false
+        gather_subset:
+          - volume_info
+      register: check_var
+      until: check_var | json_query(query_var) != orig_aggr
+      retries: "{{ check_num }}"
+      delay: "{{ wait_num }}"
+    - name: Check Move Status
+      na_ontap_command:
+        hostname: "{{ hostname }}"
+        username: "{{ username }}"
+        password: "{{ password }}"
+        command: ['volume', 'move', 'show', '-vserver', '{{ vserver }}', '-volume', '{{ volume }}', '-fields', 'details']
+        privilege: 'advanced'
+        https: true
+        validate_certs: false
+      register: move_status
+      until: move_status is search("Successful")
+      retries: "{{ check_num }}"
+      delay: "{{ wait_num }}"
+    - name: Move Volume Back
+      na_ontap_volume:
+        hostname: "{{ hostname }}"
+        username: "{{ username }}"
+        password: "{{ password }}"
+        https: true
+        validate_certs: false
+        state: present
+        name: "{{ volume }}" 
+        aggregate_name: "{{ orig_aggr }}"
+        wait_for_completion: true
+        vserver: "{{ vserver }}"

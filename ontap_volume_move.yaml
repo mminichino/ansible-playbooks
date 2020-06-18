@@ -1,0 +1,44 @@
+---
+#
+# var:cluster_admin_ip
+# var:vol_aggregate
+# var:vol_name
+# var:tier_policy
+# var:svm_name
+#
+- hosts: localhost
+  gather_facts: no
+  name: Volume Move
+  vars:
+    hostname: "{{ cluster_admin_ip }}"
+    username: "{{ admin_user }}"
+    password: "{{ admin_password }}"
+    aggr: "{{ vol_aggregate if vol_aggregate is defined else 'aggr1' }}"
+    volume: "{{ vol_name if vol_name is defined else 'nfsvol' }}"
+    tier: "{{ tier_policy if tier_policy is defined else 'none' }}"
+    vserver: "{{ svm_name if svm_name is defined else 'svm0' }}"
+  tasks:
+    - name: Set Tiering Policy
+      na_ontap_volume:
+        hostname: "{{ hostname }}"
+        username: "{{ username }}"
+        password: "{{ password }}"
+        https: true
+        validate_certs: false
+        state: present
+        name: "{{ volume }}" 
+        tiering_policy: "{{ tier }}"
+        wait_for_completion: yes
+        vserver: "{{ vserver }}"
+    - name: Move Volume
+      na_ontap_volume:
+        hostname: "{{ hostname }}"
+        username: "{{ username }}"
+        password: "{{ password }}"
+        https: true
+        validate_certs: false
+        state: present
+        name: "{{ volume }}" 
+        aggregate_name: "{{ aggr }}" 
+        wait_for_completion: yes
+        vserver: "{{ vserver }}"

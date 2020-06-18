@@ -17,7 +17,7 @@ runcmd = ''
 try:
     with open(playbook, 'r') as yamlfile:
         for line in yamlfile:
-            if line.startswith('#'):
+            if line.startswith('#') and 'var:' in line:
                 varline = line.split(':')
                 if (len(varline) > 1):
                     variable = varline[1].rstrip("\n")
