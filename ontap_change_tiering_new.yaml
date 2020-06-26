@@ -1,0 +1,27 @@
+---
+#
+# var:cluster_admin_ip
+# var:vol_name
+# var:tier_policy
+# var:svm_name
+#
+- hosts: localhost
+  gather_facts: no
+  name: Volume Move
+  vars:
+    hostname: "{{ cluster_admin_ip }}"
+    username: "{{ admin_user }}"
+    password: "{{ admin_password }}"
+    volume: "{{ vol_name if vol_name is defined else 'nfsvol' }}"
+    tier: "{{ tier_policy if tier_policy is defined else 'none' }}"
+    vserver: "{{ svm_name if svm_name is defined else 'svm0' }}"
+  tasks:
+    - name: Set Tiering Policy
+      na_ontap_command:
+        hostname: "{{ hostname }}"
+        username: "{{ username }}"
+        password: "{{ password }}"
+        command: ['volume', 'modify', '-vserver', '{{ vserver }}', '-volume', '{{ volume }}', '-tiering-policy', '{{ tier }}']
+        privilege: 'advanced'
+        https: true
+        validate_certs: false
