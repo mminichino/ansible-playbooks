@@ -1,0 +1,18 @@
+---
+- name: Stop Database VMs
+  hosts: localhost
+  gather_facts: no
+  tasks:
+  - name: Set the state of database VMs to power off
+    vmware_guest_powerstate:
+      hostname: "{{ vsphere_address }}"
+      username: "{{ vsphere_username }}"
+      password: "{{ vsphere_password }}"
+      validate_certs: no
+      folder: "{{ lab_vsphere_folder }}"
+      name: "{{ item }}"
+      state: shutdown-guest
+    delegate_to: localhost
+    register: deploy
+    with_items:
+      - "{{ database_hosts }}"

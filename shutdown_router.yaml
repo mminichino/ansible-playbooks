@@ -5,4 +5,23 @@
   tasks:
     - name: Halt System
       shell: /sbin/shutdown -h now
-
+      ignore_unreachable: true
+    - pause:
+        seconds: 15
+- name: Stop SDN VMs
+  hosts: localhost
+  gather_facts: no
+  tasks:
+    - name: Stop router VMs
+      vmware_guest_powerstate:
+        hostname: "{{ vsphere_address }}"
+        username: "{{ vsphere_username }}"
+        password: "{{ vsphere_password }}"
+        validate_certs: no
+        folder: "{{ lab_vsphere_folder }}"
+        name: "{{ item }}"
+        state: powered-off
+      delegate_to: localhost
+      register: deploy
+      with_items:
+        - "{{ network_hosts }}"
