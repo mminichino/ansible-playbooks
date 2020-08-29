@@ -1,5 +1,12 @@
 ---
-- hosts: storagegrid
+- hosts: localhost
+  gather_facts: no
+  tasks:
+    - add_host:
+        name: "{{ item }}"
+        group: sgnodesreverse
+      with_items: "{{ groups['storagegrid'] | reverse | list }}"
+- hosts: sgnodesreverse
   gather_facts: no
   serial: 1
   tasks:

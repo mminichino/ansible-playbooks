@@ -14,7 +14,7 @@
     hostname: "{{ cluster_admin_ip }}"
     username: "{{ admin_user }}"
     password: "{{ admin_password }}"
-    tmp_aggr: "{{ tmp_aggregate if vol_aggregate is defined else 'aggr2' }}"
+    tmp_aggr: "{{ tmp_aggregate if tmp_aggregate is defined else 'aggr2' }}"
     volume: "{{ vol_name if vol_name is defined else 'nfsvol' }}"
     vserver: "{{ svm_name if svm_name is defined else 'svm0' }}"
     query_var: "{{ 'ontap_info.volume_info.\"' + volume + ':' + vserver + '\".volume_id_attributes.containing_aggregate_name' }}"

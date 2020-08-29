@@ -1,0 +1,10 @@
+---
+- hosts: sgadmin
+  gather_facts: no
+  serial: 1
+  tasks:
+    - name: Rotate Audit Log
+      command: logrotate -vf /etc/logrotate.d/audit-logs
+      become: true
+      become_user: root
+      register: result

@@ -1,0 +1,13 @@
+---
+- hosts: sgadmin
+  gather_facts: no
+  serial: 1
+  tasks:
+    - name: Extract Data From Audit Log
+      shell: grep fabricpool /var/local/audit/export/audit.log | sed -n -e 's/^\([0-9T:.-]*\) .*CSIZ(UI64):\([0-9]*\).*ATYP(FC32):\([A-Z]*\).*$/\1 \2 \3/p' > /tmp/fp.analysis.data
+      become: true
+      become_user: root
+    - name: Get Data File
+      fetch:
+        src: /tmp/fp.analysis.data
+        dest: /home/admin/fetch

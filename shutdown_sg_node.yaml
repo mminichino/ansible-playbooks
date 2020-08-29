@@ -1,0 +1,29 @@
+---
+#
+# var:node_vm_name
+# var:node_host_name
+#
+- name: Stop SG Services
+  hosts: '{{ node_host_name if node_host_name is defined else node_vm_name }}'
+  tasks:
+  - name: Stop Services
+    command: service servermanager stop
+    become: true
+    become_user: root
+- name: Stop SG VM
+  hosts: localhost
+  gather_facts: no
+  vars:
+    vm_name: "{{ node_vm_name if node_vm_name is defined else '' }}"
+  tasks:
+  - name: Set the state of SG Node {{vm_name}} to power off
+    vmware_guest_powerstate:
+      hostname: "{{ vsphere_address }}"
+      username: "{{ vsphere_username }}"
+      password: "{{ vsphere_password }}"
+      validate_certs: no
+      folder: "{{ lab_vsphere_folder }}"
+      name: "{{ vm_name }}"
+      state: shutdown-guest
+    delegate_to: localhost
+    register: deploy
