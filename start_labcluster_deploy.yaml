@@ -1,0 +1,40 @@
+---
+- hosts: localhost
+  name: Node Startup
+  vars:
+    deploy_api_url: "{{ deploy_hostname }}"
+    username: "{{ ontap_admin_user }}"
+    password: "{{ admin_password }}"
+    cluster_name: "{{ labcluster_cluster_name }}"
+    geturl: "https://{{ deploy_api_url }}/api/v3/clusters?name={{ cluster_name }}"
+    puturl: "https://{{ deploy_api_url }}/api/v3/clusters/"
+  tasks:
+    - name: Get Cluster ID
+      uri:
+        url: "{{ geturl }}"
+        method: GET
+        headers:
+          Content-Type: "application/json"
+        body_format: json
+        user: "{{ username }}"
+        password: "{{ password }}"
+        status_code: 200
+        validate_certs: False
+      register: cluster_get_response
+    - name: Set ID Fact
+      set_fact:
+        cluster_id: "{{ cluster_get_response.json.records.0.id }}"
+    - name: Send Power-on
+      uri:
+        url: "{{ puturl }}{{ cluster_id }}"
+        method: PATCH
+        headers:
+          Content-Type: "application/json"
+        body_format: json
+        body:
+          availability: powered_on
+        user: "{{ username }}"
+        password: "{{ password }}"
+        status_code: 202
+        validate_certs: False
+      register: cluster_get_response
