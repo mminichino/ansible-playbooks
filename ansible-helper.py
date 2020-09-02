@@ -47,7 +47,7 @@ for opt, arg in options:
     elif opt in ('-p', '--print'):
         printarg = True
         for x in range(len(optlist)):
-            print optlist[x]
+            print (optlist[x])
         sys.exit(0)
     elif opt in optlist:
         extravaritem = '"' + opt.strip('--') + '":"' + arg + '"'
@@ -60,7 +60,7 @@ extravarjson = extravarjson + extravars[-1] + '}\''
 
 extravarexec = '--extra-vars ' + extravarjson
 
-cmdlist.append("/usr/bin/ansible-playbook")
+cmdlist.append("ansible-playbook")
 cmdlist.append(playbook)
 cmdlist.append(extravarexec)
 if checkarg:
@@ -74,5 +74,5 @@ for x in range(len(cmdlist)):
     else:
         runcmd = runcmd + ' ' + cmdlist[x]
 
-print runcmd
+print (runcmd)
 os.system(runcmd)

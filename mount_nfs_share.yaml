@@ -1,0 +1,37 @@
+---
+#
+# var:share_path
+# var:mount_point
+# var:mount_owner
+# var:mount_group
+# var:nfs_server
+# var:nfs_options
+# var:host_group
+#
+- hosts: "{{ host_group if host_group is defined else 'production' }}"
+  serial: 1
+  vars:
+    lif: "{{ nfs_server if nfs_server is defined else cluster_admin_ip }}"
+    volume: "{{ share_path if share_path is defined else 'nfsvol' }}"
+    mount: "{{ mount_point if mount_point is defined else '/mnt' }}"
+    owner: "{{ mount_owner if mount_owner is defined else 'root' }}"
+    group: "{{ mount_group if mount_group is defined else 'root' }}"
+    options: "{{ nfs_options if nfs_options is defined else 'rw,bg,hard,nointr,rsize=65536,wsize=65536,tcp,actimeo=0,vers=4,timeo=600' }}"
+  tasks:
+    - name: Mount nfs export 
+      become: true
+      become_user: root
+      mount: 
+        state: mounted
+        path: "{{ mount }}"
+        src: "{{ lif }}:{{ volume }}" 
+        opts: "{{ options }}"
+        fstype: nfs
+    - name: Set mount point owner and group
+      become: true
+      become_user: root
+      file: 
+        path: "{{ mount }}"
+        owner: "{{ owner }}"
+        group: "{{ group }}"
+        state: directory 
