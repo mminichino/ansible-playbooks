@@ -1,0 +1,48 @@
+---
+#
+# var:cluster_admin_ip
+# var:db_host_name
+# var:oracle_sid
+# var:backup_cmd
+# var:vol_name
+# var:svm_name
+# var:freeze_cmd
+# var:thaw_cmd
+#
+- hosts: "{{ db_host_name }}"
+  gather_facts: no
+  serial: 1
+  vars:
+    runcmd: "{{ freeze_cmd if freeze_cmd is defined else '/home/oracle/oracle-scripts/db-hot-backup.sh -b -s ' + oracle_sid }}"
+  tasks:
+    - name: Put database in hot backup mode
+      command: "{{ runcmd }}"
+- name: Create Snapshot
+  hosts: localhost
+  vars:
+    hostname: "{{ cluster_admin_ip }}"
+    username: "{{ admin_user }}"
+    password: "{{ admin_password }}"
+    volume: "{{ vol_name if vol_name is defined else 'nfsvol' }}"
+    vserver: "{{ svm_name if svm_name is defined else 'svm0' }}"
+    snapshot: "{{ 'snapshot_backup_' + ansible_date_time.iso8601_basic_short }}"
+  tasks:
+    - name: Snapshot Volume
+      na_ontap_snapshot:
+        hostname: "{{ hostname }}"
+        username: "{{ username }}"
+        password: "{{ password }}"
+        https: true
+        validate_certs: false
+        state: present
+        volume: "{{ volume }}" 
+        vserver: "{{ vserver }}"
+        snapshot: "{{ snapshot }}"
+- hosts: "{{ db_host_name }}"
+  gather_facts: no
+  serial: 1
+  vars:
+    runcmd: "{{ thaw_cmd if thaw_cmd is defined else '/home/oracle/oracle-scripts/db-hot-backup.sh -e -s ' + oracle_sid }}"
+  tasks:
+    - name: Take database out of hot backup mode
+      command: "{{ runcmd }}"

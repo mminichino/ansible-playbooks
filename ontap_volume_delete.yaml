@@ -1,0 +1,46 @@
+---
+#
+# var:cluster_admin_ip
+# var:vol_name
+# var:svm_name
+#
+- hosts: localhost
+  gather_facts: no
+  name: Volume Delete
+  vars:
+    hostname: "{{ cluster_admin_ip }}"
+    username: "{{ admin_user }}"
+    password: "{{ admin_password }}"
+    volume: "{{ vol_name if vol_name is defined else 'nfsvol' }}"
+    vserver: "{{ svm_name if svm_name is defined else 'svm0' }}"
+  tasks:
+    - name: Unmount Volume
+      na_ontap_volume:
+        hostname: "{{ hostname }}"
+        username: "{{ username }}"
+        password: "{{ password }}"
+        https: true
+        validate_certs: false
+        junction_path: ''
+        name: "{{ volume }}" 
+        vserver: "{{ vserver }}"
+    - name: Offline Volume
+      na_ontap_volume:
+        hostname: "{{ hostname }}"
+        username: "{{ username }}"
+        password: "{{ password }}"
+        https: true
+        validate_certs: false
+        is_online: no
+        name: "{{ volume }}" 
+        vserver: "{{ vserver }}"
+    - name: Delete Volume
+      na_ontap_volume:
+        hostname: "{{ hostname }}"
+        username: "{{ username }}"
+        password: "{{ password }}"
+        https: true
+        validate_certs: false
+        state: absent
+        name: "{{ volume }}" 
+        vserver: "{{ vserver }}"
