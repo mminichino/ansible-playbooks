@@ -113,11 +113,15 @@
     username: "{{ admin_user }}"
     password: "{{ admin_password }}"
     dbvolume: "{{ db_vol_name if db_vol_name is defined else 'nfsvol' }}"
+    archvolume: "{{ arch_vol_name if arch_vol_name is defined else 'nfsvol' }}"
     vserver: "{{ svm_name if svm_name is defined else 'svm0' }}"
     snapshot: "{{ 'snapshot_clone_' + ansible_date_time.iso8601_basic_short }}"
     junction: "{{ junction_root if junction_root is defined else '/oradata' }}"
     dbclone: "{{ db_clone_name if db_clone_name is defined else dbvolume + '_1' }}"
-    junction_path: "{{ junction_root + '/' + dbclone }}"
+    archclone: "{{ arch_clone_name if arch_clone_name is defined else archvolume + '_1' }}"
+    junction_db: "{{ junction_root + '/' + dbclone }}"
+    junction_arch: "{{ junction_root + '/' + archclone }}"
+    thawcmd: "{{ freeze_cmd if freeze_cmd is defined else '/home/oracle/oracle-scripts/db-hot-backup.sh -e -s ' + oracle_sid }}"
   tasks:
     - name: DB Volume Clone
       block:
@@ -143,7 +147,7 @@
             parent_volume: "{{ dbvolume }}" 
             vserver: "{{ vserver }}"
             parent_snapshot: "{{ snapshot }}"
-            junction_path: "{{ junction_path }}"
+            junction_path: "{{ junction_db }}"
             volume: "{{ dbclone }}"
             space_reserve: none
       rescue:
@@ -168,35 +172,41 @@
     hostname: "{{ cluster_admin_ip }}"
     username: "{{ admin_user }}"
     password: "{{ admin_password }}"
+    dbvolume: "{{ db_vol_name if db_vol_name is defined else 'nfsvol' }}"
     archvolume: "{{ arch_vol_name if arch_vol_name is defined else 'nfsvol' }}"
     vserver: "{{ svm_name if svm_name is defined else 'svm0' }}"
     snapshot: "{{ 'snapshot_clone_' + ansible_date_time.iso8601_basic_short }}"
     junction: "{{ junction_root if junction_root is defined else '/oradata' }}"
+    dbclone: "{{ db_clone_name if db_clone_name is defined else dbvolume + '_1' }}"
     archclone: "{{ arch_clone_name if arch_clone_name is defined else archvolume + '_1' }}"
-    junction_path: "{{ junction_root + '/' + archclone }}"
+    junction_db: "{{ junction_root + '/' + dbclone }}"
+    junction_arch: "{{ junction_root + '/' + archclone }}"
+    thawcmd: "{{ freeze_cmd if freeze_cmd is defined else '/home/oracle/oracle-scripts/db-hot-backup.sh -e -s ' + oracle_sid }}"
   tasks:
-    - name: Snapshot Arch Volume
-      na_ontap_snapshot:
-        hostname: "{{ hostname }}"
-        username: "{{ username }}"
-        password: "{{ password }}"
-        https: true
-        validate_certs: false
-        state: present
-        volume: "{{ archvolume }}" 
-        vserver: "{{ vserver }}"
-        snapshot: "{{ snapshot }}"
-    - name: Clone Arch Volume
-      na_ontap_volume_clone:
-        hostname: "{{ hostname }}"
-        username: "{{ username }}"
-        password: "{{ password }}"
-        https: true
-        validate_certs: false
-        state: present
-        parent_volume: "{{ archvolume }}" 
-        vserver: "{{ vserver }}"
-        parent_snapshot: "{{ snapshot }}"
-        junction_path: "{{ junction_path }}"
-        volume: "{{ archclone }}"
-        space_reserve: none
+    - name: DB Volume Clone
+      block:
+        - name: Snapshot Arch Volume
+          na_ontap_snapshot:
+            hostname: "{{ hostname }}"
+            username: "{{ username }}"
+            password: "{{ password }}"
+            https: true
+            validate_certs: false
+            state: present
+            volume: "{{ archvolume }}" 
+            vserver: "{{ vserver }}"
+            snapshot: "{{ snapshot }}"
+        - name: Clone Arch Volume
+          na_ontap_volume_clone:
+            hostname: "{{ hostname }}"
+            username: "{{ username }}"
+            password: "{{ password }}"
+            https: true
+            validate_certs: false
+            state: present
+            parent_volume: "{{ archvolume }}" 
+            vserver: "{{ vserver }}"
+            parent_snapshot: "{{ snapshot }}"
+            junction_path: "{{ junction_arch }}"
+            volume: "{{ archclone }}"
+            space_reserve: none
