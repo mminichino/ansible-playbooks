@@ -4,34 +4,29 @@
 # var:db_host_name
 # var:oracle_sid
 # var:backup_cmd
-# var:vol_name
+# var:db_vol_name
+# var:arch_vol_name
 # var:svm_name
 # var:freeze_cmd
 # var:thaw_cmd
-# var:junction_path
-# var:clone_name
+# var:junction_root
+# var:db_clone_name
+# var:arch_clone_name
 #
-- hosts: "{{ db_host_name }}"
-  gather_facts: no
-  serial: 1
-  vars:
-    runcmd: "{{ freeze_cmd if freeze_cmd is defined else '/home/oracle/oracle-scripts/db-hot-backup.sh -b -s ' + oracle_sid }}"
-  tasks:
-    - name: Put database in hot backup mode
-      command: "{{ runcmd }}"
-- name: Create Clone
+- name: Delete Old Clone
   hosts: localhost
   vars:
     hostname: "{{ cluster_admin_ip }}"
     username: "{{ admin_user }}"
     password: "{{ admin_password }}"
-    volume: "{{ vol_name if vol_name is defined else 'nfsvol' }}"
+    dbvolume: "{{ db_vol_name if db_vol_name is defined else 'nfsvol' }}"
+    archvolume: "{{ arch_vol_name if arch_vol_name is defined else 'nfsvol' }}"
     vserver: "{{ svm_name if svm_name is defined else 'svm0' }}"
-    snapshot: "{{ 'snapshot_clone_' + ansible_date_time.iso8601_basic_short }}"
-    junction: "{{ junction_path if junction_path is defined else '/oradata' }}"
-    clone: "{{ clone_name if clone_name is defined else volume + '_1' }}"
+    dbclone: "{{ db_clone_name if db_clone_name is defined else dbvolume + '_1' }}"
+    archclone: "{{ arch_clone_name if arch_clone_name is defined else archvolume + '_1' }}"
   tasks:
-    - name: Unmount Clone
+    - name: Unmount DB Clone
+      ignore_errors: yes
       na_ontap_volume:
         hostname: "{{ hostname }}"
         username: "{{ username }}"
@@ -39,9 +34,10 @@
         https: true
         validate_certs: false
         junction_path: ''
-        name: "{{ clone }}"
+        name: "{{ dbclone }}"
         vserver: "{{ vserver }}"
-    - name: Offline Clone
+    - name: Offline DB Clone
+      ignore_errors: yes
       na_ontap_volume:
         hostname: "{{ hostname }}"
         username: "{{ username }}"
@@ -49,9 +45,10 @@
         https: true
         validate_certs: false
         is_online: no
-        name: "{{ clone }}"
+        name: "{{ dbclone }}"
         vserver: "{{ vserver }}"
-    - name: Delete Clone
+    - name: Delete DB Clone
+      ignore_errors: yes
       na_ontap_volume:
         hostname: "{{ hostname }}"
         username: "{{ username }}"
@@ -59,9 +56,126 @@
         https: true
         validate_certs: false
         state: absent
-        name: "{{ clone }}"
+        name: "{{ dbclone }}"
         vserver: "{{ vserver }}"
-    - name: Snapshot Volume
+    - name: Unmount Arch Clone
+      ignore_errors: yes
+      na_ontap_volume:
+        hostname: "{{ hostname }}"
+        username: "{{ username }}"
+        password: "{{ password }}"
+        https: true
+        validate_certs: false
+        junction_path: ''
+        name: "{{ archclone }}"
+        vserver: "{{ vserver }}"
+    - name: Offline Arch Clone
+      ignore_errors: yes
+      na_ontap_volume:
+        hostname: "{{ hostname }}"
+        username: "{{ username }}"
+        password: "{{ password }}"
+        https: true
+        validate_certs: false
+        is_online: no
+        name: "{{ archclone }}"
+        vserver: "{{ vserver }}"
+    - name: Delete Arch Clone
+      ignore_errors: yes
+      na_ontap_volume:
+        hostname: "{{ hostname }}"
+        username: "{{ username }}"
+        password: "{{ password }}"
+        https: true
+        validate_certs: false
+        state: absent
+        name: "{{ archclone }}"
+        vserver: "{{ vserver }}"
+- hosts: "{{ db_host_name }}"
+  gather_facts: no
+  serial: 1
+  vars:
+    freezecmd: "{{ freeze_cmd if freeze_cmd is defined else '/home/oracle/oracle-scripts/db-hot-backup.sh -b -s ' + oracle_sid }}"
+    thawcmd: "{{ freeze_cmd if freeze_cmd is defined else '/home/oracle/oracle-scripts/db-hot-backup.sh -e -s ' + oracle_sid }}"
+  tasks:
+    - name: Put database in hot backup mode
+      block:
+        - name: Start Backup Mode
+          command: "{{ freezecmd }}"
+      rescue:
+        - name: Take databse out of backup mode
+          command: "{{ thawcmd }}"
+        - meta: end_play
+- name: Create DB Clone
+  hosts: localhost
+  vars:
+    hostname: "{{ cluster_admin_ip }}"
+    username: "{{ admin_user }}"
+    password: "{{ admin_password }}"
+    dbvolume: "{{ db_vol_name if db_vol_name is defined else 'nfsvol' }}"
+    vserver: "{{ svm_name if svm_name is defined else 'svm0' }}"
+    snapshot: "{{ 'snapshot_clone_' + ansible_date_time.iso8601_basic_short }}"
+    junction: "{{ junction_root if junction_root is defined else '/oradata' }}"
+    dbclone: "{{ db_clone_name if db_clone_name is defined else dbvolume + '_1' }}"
+    junction_path: "{{ junction_root + '/' + dbclone }}"
+  tasks:
+    - name: DB Volume Clone
+      block:
+        - name: Snapshot DB Volume
+          na_ontap_snapshot:
+            hostname: "{{ hostname }}"
+            username: "{{ username }}"
+            password: "{{ password }}"
+            https: true
+            validate_certs: false
+            state: present
+            volume: "{{ dbvolume }}" 
+            vserver: "{{ vserver }}"
+            snapshot: "{{ snapshot }}"
+        - name: Clone DB Volume
+          na_ontap_volume_clone:
+            hostname: "{{ hostname }}"
+            username: "{{ username }}"
+            password: "{{ password }}"
+            https: true
+            validate_certs: false
+            state: present
+            parent_volume: "{{ dbvolume }}" 
+            vserver: "{{ vserver }}"
+            parent_snapshot: "{{ snapshot }}"
+            junction_path: "{{ junction_path }}"
+            volume: "{{ dbclone }}"
+            space_reserve: none
+      rescue:
+        - name: Take databse out of backup mode
+          command: "{{ thawcmd }}"
+        - meta: end_play
+- hosts: "{{ db_host_name }}"
+  gather_facts: no
+  serial: 1
+  vars:
+    thawcmd: "{{ freeze_cmd if freeze_cmd is defined else '/home/oracle/oracle-scripts/db-hot-backup.sh -e -s ' + oracle_sid }}"
+  tasks:
+    - name: Take database out of hot backup mode
+      block:
+        - name: End Backup Mode
+          command: "{{ thawcmd }}"
+      rescue:
+        - meta: end_play
+- name: Create Arch Clone
+  hosts: localhost
+  vars:
+    hostname: "{{ cluster_admin_ip }}"
+    username: "{{ admin_user }}"
+    password: "{{ admin_password }}"
+    archvolume: "{{ arch_vol_name if arch_vol_name is defined else 'nfsvol' }}"
+    vserver: "{{ svm_name if svm_name is defined else 'svm0' }}"
+    snapshot: "{{ 'snapshot_clone_' + ansible_date_time.iso8601_basic_short }}"
+    junction: "{{ junction_root if junction_root is defined else '/oradata' }}"
+    archclone: "{{ arch_clone_name if arch_clone_name is defined else archvolume + '_1' }}"
+    junction_path: "{{ junction_root + '/' + archclone }}"
+  tasks:
+    - name: Snapshot Arch Volume
       na_ontap_snapshot:
         hostname: "{{ hostname }}"
         username: "{{ username }}"
@@ -69,10 +183,10 @@
         https: true
         validate_certs: false
         state: present
-        volume: "{{ volume }}" 
+        volume: "{{ archvolume }}" 
         vserver: "{{ vserver }}"
         snapshot: "{{ snapshot }}"
-    - name: Clone Volume
+    - name: Clone Arch Volume
       na_ontap_volume_clone:
         hostname: "{{ hostname }}"
         username: "{{ username }}"
@@ -80,17 +194,9 @@
         https: true
         validate_certs: false
         state: present
-        parent_volume: "{{ volume }}" 
+        parent_volume: "{{ archvolume }}" 
         vserver: "{{ vserver }}"
         parent_snapshot: "{{ snapshot }}"
-        junction_path: "{{ junction }}"
-        volume: "{{ clone }}"
+        junction_path: "{{ junction_path }}"
+        volume: "{{ archclone }}"
         space_reserve: none
-- hosts: "{{ db_host_name }}"
-  gather_facts: no
-  serial: 1
-  vars:
-    runcmd: "{{ thaw_cmd if thaw_cmd is defined else '/home/oracle/oracle-scripts/db-hot-backup.sh -e -s ' + oracle_sid }}"
-  tasks:
-    - name: Take database out of hot backup mode
-      command: "{{ runcmd }}"
