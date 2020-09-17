@@ -1,0 +1,76 @@
+---
+#
+# var:cluster_admin_ip
+# var:db_host_name
+# var:oracle_sid
+# var:backup_cmd
+# var:vol_name
+# var:svm_name
+# var:backup_dir
+# var:number
+#
+- hosts: "{{ db_host_name }}"
+  gather_facts: no
+  serial: 1
+  vars:
+    directory: "{{ backup_dir if backup_dir is defined else '/backup' }}"
+    backupcmd: "{{ backup_cmd if backup_cmd is defined else '/home/oracle/oracle-scripts/db-incr-merge.sh -n -s ' + oracle_sid + ' -d ' + directory }}"
+  tasks:
+    - name: Backup database as incremental merge
+      block:
+        - name: Run Backup
+          command: "{{ backupcmd }}"
+      rescue:
+        - meta: end_play
+- name: Create Incr Merge Snapshots
+  hosts: localhost
+  vars:
+    hostname: "{{ cluster_admin_ip }}"
+    username: "{{ admin_user }}"
+    password: "{{ admin_password }}"
+    volume: "{{ vol_name if vol_name is defined else 'nfsvol' }}"
+    vserver: "{{ svm_name if svm_name is defined else 'svm0' }}"
+    snapshot: "{{ 'snapshot_clone_' + ansible_date_time.iso8601_basic_short }}"
+    clone: "{{ clone_name if clone_name is defined else dbvolume + '_1' }}"
+    junction: "{{ junction_path + '/' + clone }}"
+    backupcmd: "{{ backup_cmd if backup_cmd is defined else '/home/oracle/oracle-scripts/db-hot-backup.sh -e -s ' + oracle_sid }}"
+    snap_num: "{{ number if number is defined else 10 }}"
+    snap_start: "{{ 1 }}"
+  tasks:
+    - name: Snapshot Volume
+      block:
+        - name: Delete Oldest Snapshot
+          na_ontap_snapshot:
+            hostname: "{{ hostname }}"
+            username: "{{ username }}"
+            password: "{{ password }}"
+            https: true
+            validate_certs: false
+            state: absent
+            volume: "{{ volume }}" 
+            vserver: "{{ vserver }}"
+            snapshot: "backup_snapshot_{{ '%02d'|format(snap_num|int) }}"
+        - name: Shuffle Remaining Snapshots
+          na_ontap_snapshot:
+            hostname: "{{ hostname }}"
+            username: "{{ username }}"
+            password: "{{ password }}"
+            https: true
+            validate_certs: false
+            state: present
+            from_name: "backup_snapshot_{{ item }}"
+            volume: "{{ volume }}" 
+            vserver: "{{ vserver }}"
+            snapshot: "backup_snapshot_{{ '%02d'|format(item|int + 1) }}"
+          with_sequence: end=1 start="{{ snap_num|int - 1 }}" format=%02d stride=-1
+        - name: Create New Snapshot
+          na_ontap_snapshot:
+            hostname: "{{ hostname }}"
+            username: "{{ username }}"
+            password: "{{ password }}"
+            https: true
+            validate_certs: false
+            state: present
+            volume: "{{ volume }}" 
+            vserver: "{{ vserver }}"
+            snapshot: "backup_snapshot_{{ '%02d'|format(snap_start|int) }}"

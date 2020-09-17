@@ -12,6 +12,7 @@
 # var:junction_root
 # var:db_clone_name
 # var:arch_clone_name
+# var:number
 #
 - name: Delete Old Clone
   hosts: localhost
@@ -22,8 +23,10 @@
     dbvolume: "{{ db_vol_name if db_vol_name is defined else 'nfsvol' }}"
     archvolume: "{{ arch_vol_name if arch_vol_name is defined else 'nfsvol' }}"
     vserver: "{{ svm_name if svm_name is defined else 'svm0' }}"
-    dbclone: "{{ db_clone_name if db_clone_name is defined else dbvolume + '_1' }}"
-    archclone: "{{ arch_clone_name if arch_clone_name is defined else archvolume + '_1' }}"
+    clone_num: "{{ number if number is defined else 1 }}"
+    snapshot: "clone_snapshot_{{ '%02d'|format(clone_num|int) }}"
+    dbclone: "{{ db_clone_name if db_clone_name is defined else dbvolume + '_' + '%02d'|format(clone_num|int) }}"
+    archclone: "{{ arch_clone_name if arch_clone_name is defined else archvolume + '_' + '%02d'|format(clone_num|int) }}"
   tasks:
     - name: Unmount DB Clone
       ignore_errors: yes
@@ -58,6 +61,17 @@
         state: absent
         name: "{{ dbclone }}"
         vserver: "{{ vserver }}"
+    - name: Delete DB Snapshot
+      na_ontap_snapshot:
+        hostname: "{{ hostname }}"
+        username: "{{ username }}"
+        password: "{{ password }}"
+        https: true
+        validate_certs: false
+        state: absent
+        volume: "{{ dbvolume }}"
+        vserver: "{{ vserver }}"
+        snapshot: "{{ snapshot }}"
     - name: Unmount Arch Clone
       ignore_errors: yes
       na_ontap_volume:
@@ -91,6 +105,17 @@
         state: absent
         name: "{{ archclone }}"
         vserver: "{{ vserver }}"
+    - name: Delete Arch Snapshot
+      na_ontap_snapshot:
+        hostname: "{{ hostname }}"
+        username: "{{ username }}"
+        password: "{{ password }}"
+        https: true
+        validate_certs: false
+        state: absent
+        volume: "{{ archvolume }}"
+        vserver: "{{ vserver }}"
+        snapshot: "{{ snapshot }}"
 - hosts: "{{ db_host_name }}"
   gather_facts: no
   serial: 1
@@ -113,15 +138,13 @@
     username: "{{ admin_user }}"
     password: "{{ admin_password }}"
     dbvolume: "{{ db_vol_name if db_vol_name is defined else 'nfsvol' }}"
-    archvolume: "{{ arch_vol_name if arch_vol_name is defined else 'nfsvol' }}"
     vserver: "{{ svm_name if svm_name is defined else 'svm0' }}"
-    snapshot: "{{ 'snapshot_clone_' + ansible_date_time.iso8601_basic_short }}"
+    clone_num: "{{ number if number is defined else 1 }}"
     junction: "{{ junction_root if junction_root is defined else '/oradata' }}"
-    dbclone: "{{ db_clone_name if db_clone_name is defined else dbvolume + '_1' }}"
-    archclone: "{{ arch_clone_name if arch_clone_name is defined else archvolume + '_1' }}"
-    junction_db: "{{ junction_root + '/' + dbclone }}"
-    junction_arch: "{{ junction_root + '/' + archclone }}"
     thawcmd: "{{ freeze_cmd if freeze_cmd is defined else '/home/oracle/oracle-scripts/db-hot-backup.sh -e -s ' + oracle_sid }}"
+    snapshot: "clone_snapshot_{{ '%02d'|format(clone_num|int) }}"
+    dbclone: "{{ db_clone_name if db_clone_name is defined else dbvolume + '_' + '%02d'|format(clone_num|int) }}"
+    junction_db: "{{ junction_root + '/' + dbclone }}"
   tasks:
     - name: DB Volume Clone
       block:
@@ -172,16 +195,13 @@
     hostname: "{{ cluster_admin_ip }}"
     username: "{{ admin_user }}"
     password: "{{ admin_password }}"
-    dbvolume: "{{ db_vol_name if db_vol_name is defined else 'nfsvol' }}"
     archvolume: "{{ arch_vol_name if arch_vol_name is defined else 'nfsvol' }}"
     vserver: "{{ svm_name if svm_name is defined else 'svm0' }}"
-    snapshot: "{{ 'snapshot_clone_' + ansible_date_time.iso8601_basic_short }}"
+    clone_num: "{{ number if number is defined else 1 }}"
     junction: "{{ junction_root if junction_root is defined else '/oradata' }}"
-    dbclone: "{{ db_clone_name if db_clone_name is defined else dbvolume + '_1' }}"
-    archclone: "{{ arch_clone_name if arch_clone_name is defined else archvolume + '_1' }}"
-    junction_db: "{{ junction_root + '/' + dbclone }}"
+    snapshot: "clone_snapshot_{{ '%02d'|format(clone_num|int) }}"
+    archclone: "{{ arch_clone_name if arch_clone_name is defined else archvolume + '_' + '%02d'|format(clone_num|int) }}"
     junction_arch: "{{ junction_root + '/' + archclone }}"
-    thawcmd: "{{ freeze_cmd if freeze_cmd is defined else '/home/oracle/oracle-scripts/db-hot-backup.sh -e -s ' + oracle_sid }}"
   tasks:
     - name: DB Volume Clone
       block:
