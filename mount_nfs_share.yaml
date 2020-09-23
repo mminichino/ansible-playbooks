@@ -9,6 +9,7 @@
 # var:host_group
 #
 - hosts: "{{ host_group if host_group is defined else 'production' }}"
+  gather_facts: no
   serial: 1
   vars:
     lif: "{{ nfs_server if nfs_server is defined else cluster_admin_ip }}"
@@ -18,20 +19,4 @@
     group: "{{ mount_group if mount_group is defined else 'root' }}"
     options: "{{ nfs_options if nfs_options is defined else 'rw,bg,hard,nointr,rsize=65536,wsize=65536,tcp,actimeo=0,vers=4,timeo=600' }}"
   tasks:
-    - name: Mount nfs export 
-      become: true
-      become_user: root
-      mount: 
-        state: mounted
-        path: "{{ mount }}"
-        src: "{{ lif }}:{{ volume }}" 
-        opts: "{{ options }}"
-        fstype: nfs
-    - name: Set mount point owner and group
-      become: true
-      become_user: root
-      file: 
-        path: "{{ mount }}"
-        owner: "{{ owner }}"
-        group: "{{ group }}"
-        state: directory 
+    - include_tasks: mount_nfs_tasks.yaml

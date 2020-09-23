@@ -1,18 +1,41 @@
 #!/usr/bin/env python
 #
 
-import getopt, sys, os, stat, subprocess
+import getopt, sys, os, stat, subprocess, json, re, fnmatch
+
+def err_exit(*args):
+    if args:
+        for errText in args:
+            print("[!] Error: " + errText)
+        sys.exit(1)
+    else:
+        print("Usage: " + sys.argv[0] + " playbook.yaml [ -c | -p | -d | -l | -s save_key | -r save_key]")
+        sys.exit(1)
 
 arglist = []
 optlist = []
 checkarg = False
 printarg = False
 debugarg = False
+savearg = False
+readarg = False
+listarg = False
 extravars = []
 extravarjson = ''
 cmdlist = []
-playbook = sys.argv[1]
+try:
+    playbook = sys.argv[1]
+except IndexError:
+    err_exit()
 runcmd = ''
+utilityConfigDir = os.environ['HOME'] + '/.ansible-helper'
+saveFileKey = None
+
+if not os.path.exists(utilityConfigDir):
+    try:
+        os.mkdir(utilityConfigDir)
+    except OSError as err:
+        err_exit(err)
 
 try:
     with open(playbook, 'r') as yamlfile:
@@ -30,6 +53,8 @@ sys.argv.pop(1)
 arglist.append("check")
 arglist.append("print")
 arglist.append("debug")
+arglist.append("save")
+arglist.append("read")
 
 for x in range(len(optlist)):
     optitem = optlist[x] + "="
@@ -37,7 +62,10 @@ for x in range(len(optlist)):
     arglist.append(optitem)
     optlist[x] = optdash
 
-options, remainder = getopt.getopt(sys.argv[1:], 'cpd', arglist) 
+try:
+    options, remainder = getopt.getopt(sys.argv[1:], 'cpdls:r:', arglist) 
+except getopt.GetoptError as err:
+    err_exit()
 
 for opt, arg in options:
     if opt in ('-c', '--check'):
@@ -46,19 +74,92 @@ for opt, arg in options:
         debugarg = True
     elif opt in ('-p', '--print'):
         printarg = True
-        for x in range(len(optlist)):
-            print (optlist[x])
-        sys.exit(0)
+    elif opt in ('-l', '--list'):
+        listarg = True
+    elif opt in ('-s', '--save'):
+        savearg = True
+        saveFileKey = arg
+    elif opt in ('-r', '--read'):
+        readarg = True
+        saveFileKey = arg
     elif opt in optlist:
         extravaritem = '"' + opt.strip('--') + '":"' + arg + '"'
         extravars.append(extravaritem)
 
-extravarjson = '\'{'
-for x in range(len(extravars)-1):
-    extravarjson = extravarjson + extravars[x] + ','
-extravarjson = extravarjson + extravars[-1] + '}\''
+if saveFileKey:
+    if re.findall('[^a-zA-Z0-9-_]',saveFileKey):
+        err_exit("Save key should not contain special characters.")
 
-extravarexec = '--extra-vars ' + extravarjson
+if readarg and savearg:
+    err_exit("Read and save options are mutually exclusive.")
+
+if printarg:
+    if checkarg or debugarg or savearg or readarg or listarg:
+        err_exit("Print option can not be combined with other options.")
+    else:
+        for x in range(len(optlist)):
+            print (optlist[x])
+        sys.exit(0)
+
+if listarg:
+    if checkarg or debugarg or savearg or readarg or printarg:
+        err_exit("List option can not be combined with other options.")
+    else:
+        if os.path.exists(utilityConfigDir):
+            utilityConfigDirContents = os.listdir(utilityConfigDir)
+            count = 1
+            for fname in utilityConfigDirContents:
+                if fnmatch.fnmatch(fname, playbook + ".save.*"):
+                    saveKeyText = fname.replace(playbook + '.save.', '')
+                    print(str(count) + ") " + saveKeyText + " (" + fname + ")")
+                    count = count + 1
+            sys.exit(0)
+        else:
+            err_exit("No save files have been created.")
+
+if readarg:
+    saveFileName = utilityConfigDir + '/' + playbook + '.save.' + saveFileKey
+    try:
+        with open(saveFileName, 'r') as saveFile:
+            saveData = json.load(saveFile)
+            savedPlaybook = next(iter(saveData))
+            if savedPlaybook != playbook:
+                err_exit("Playbook " + playbook + " does not match saved playbook " + savedPlaybook)
+            for key in saveData[savedPlaybook]:
+                extravaritem = '"' + key + '":"' + saveData[savedPlaybook][key] + '"'
+                extravars.append(extravaritem)
+    except EnvironmentError as err:
+        print("Could not read save file: %s" % err)
+        sys.exit(1)
+
+if savearg:
+    saveFileName = utilityConfigDir + '/' + playbook + '.save.' + saveFileKey
+    try:
+        saveData = {playbook : {}}
+        with open(saveFileName, 'w') as saveFile:
+            for x in range(len(optlist)):
+                inputText = input(optlist[x] + ": ")
+                inputText = inputText.rstrip("\n")
+                if inputText != '':
+                    optText = optlist[x].strip('--')
+                    keyValue = { optText : inputText }
+                    saveData[playbook].update(keyValue)
+            json.dump(saveData, saveFile, indent=4)
+            saveFile.write("\n")
+            saveFile.close()
+    except EnvironmentError as err:
+        print("Could not write save file: %s" % err)
+        sys.exit(1)
+    sys.exit(0)
+
+if extravars:
+    extravarjson = '\'{'
+    for x in range(len(extravars)-1):
+        extravarjson = extravarjson + extravars[x] + ','
+    extravarjson = extravarjson + extravars[-1] + '}\''
+    extravarexec = '--extra-vars ' + extravarjson
+else:
+    extravarexec = ''
 
 cmdlist.append("ansible-playbook")
 cmdlist.append(playbook)

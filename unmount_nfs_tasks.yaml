@@ -1,0 +1,8 @@
+---
+- name: Remove nfs mount from host
+  become: true
+  become_user: root
+  mount: 
+    state: absent
+    path: "{{ mount }}"
+    fstype: nfs

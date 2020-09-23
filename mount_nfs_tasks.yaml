@@ -1,0 +1,18 @@
+---
+- name: Mount nfs export 
+  become: true
+  become_user: root
+  mount: 
+    state: mounted
+    path: "{{ mount }}"
+    src: "{{ lif }}:{{ volume }}" 
+    opts: "{{ options }}"
+    fstype: nfs
+- name: Set mount point owner and group
+  become: true
+  become_user: root
+  file: 
+    path: "{{ mount }}"
+    owner: "{{ owner }}"
+    group: "{{ group }}"
+    state: directory 

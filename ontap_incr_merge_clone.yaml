@@ -10,7 +10,22 @@
 # var:run_backup
 # var:junction_path
 # var:clone_name
+# var:mount_clone
+# var:clone_srv_ip
+# var:dest_host_name
+# var:dest_mount_point
+# var:dest_mount_owner
+# var:dest_mount_group
+# var:dest_nfs_options
 #
+- hosts: "{{ dest_host_name if dest_host_name is defined else 'localhost' }}"
+  gather_facts: no
+  vars:
+    mount: "{{ dest_mount_point if dest_mount_point is defined else '/mnt' }}"
+    runumount: "{{ mount_clone if mount_clone is defined else 'false'|bool }}"
+  tasks:
+    - include_tasks: unmount_nfs_tasks.yaml
+      when: runumount|bool == true
 - hosts: "{{ db_host_name if db_host_name is defined else 'localhost' }}"
   gather_facts: no
   serial: 1
@@ -110,3 +125,19 @@
             junction_path: "{{ junction }}"
             volume: "{{ clone }}"
             space_reserve: none
+- hosts: "{{ dest_host_name if dest_host_name is defined else 'localhost' }}"
+  gather_facts: no
+  vars:
+    lif: "{{ clone_srv_ip if clone_srv_ip is defined else cluster_admin_ip }}"
+    mount: "{{ dest_mount_point if dest_mount_point is defined else '/mnt' }}"
+    owner: "{{ dest_mount_owner if dest_mount_owner is defined else 'root' }}"
+    group: "{{ dest_mount_group if dest_mount_group is defined else 'root' }}"
+    options: "{{ dest_nfs_options if dest_nfs_options is defined else 'rw,bg,hard,nointr,rsize=65536,wsize=65536,tcp,actimeo=0,vers=4,timeo=600' }}"
+    clone_num: "{{ number if number is defined else 1 }}"
+    clone_volume: "{{ vol_name if vol_name is defined else 'nfsvol' }}"
+    clone: "{{ clone_name if clone_name is defined else clone_volume + '_' + '%02d'|format(clone_num|int) }}"
+    volume: "{{ junction_path + '/' + clone }}"
+    runmount: "{{ mount_clone if mount_clone is defined else 'false'|bool }}"
+  tasks:
+    - include_tasks: mount_nfs_tasks.yaml
+      when: runmount|bool == true
