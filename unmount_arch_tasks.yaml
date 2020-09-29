@@ -1,0 +1,8 @@
+---
+- name: Remove arch mount from host
+  become: true
+  become_user: root
+  mount: 
+    state: absent
+    path: "{{ archmount }}"
+    fstype: nfs

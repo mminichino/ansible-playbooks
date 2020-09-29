@@ -9,7 +9,7 @@ def err_exit(*args):
             print("[!] Error: " + errText)
         sys.exit(1)
     else:
-        print("Usage: " + sys.argv[0] + " playbook.yaml [ -c | -p | -d | -l | -s save_key | -r save_key]")
+        print("Usage: " + sys.argv[0] + " playbook.yaml --extra_vars [ -c | -p | -d | -l | -s save_key | -r save_key]")
         sys.exit(1)
 
 arglist = []
@@ -118,13 +118,14 @@ if listarg:
             err_exit("No save files have been created.")
 
 if readarg:
-    saveFileName = utilityConfigDir + '/' + playbook + '.save.' + saveFileKey
+    playbookBaseName = os.path.basename(playbook)
+    saveFileName = utilityConfigDir + '/' + playbookBaseName + '.save.' + saveFileKey
     try:
         with open(saveFileName, 'r') as saveFile:
             saveData = json.load(saveFile)
             savedPlaybook = next(iter(saveData))
-            if savedPlaybook != playbook:
-                err_exit("Playbook " + playbook + " does not match saved playbook " + savedPlaybook)
+            if savedPlaybook != playbookBaseName:
+                err_exit("Playbook " + playbookBaseName + " does not match saved playbook " + savedPlaybook)
             for key in saveData[savedPlaybook]:
                 extravaritem = '"' + key + '":"' + saveData[savedPlaybook][key] + '"'
                 extravars.append(extravaritem)
@@ -133,9 +134,10 @@ if readarg:
         sys.exit(1)
 
 if savearg:
-    saveFileName = utilityConfigDir + '/' + playbook + '.save.' + saveFileKey
+    playbookBaseName = os.path.basename(playbook)
+    saveFileName = utilityConfigDir + '/' + playbookBaseName + '.save.' + saveFileKey
     try:
-        saveData = {playbook : {}}
+        saveData = {playbookBaseName : {}}
         with open(saveFileName, 'w') as saveFile:
             for x in range(len(optlist)):
                 inputText = input(optlist[x] + ": ")
@@ -143,7 +145,7 @@ if savearg:
                 if inputText != '':
                     optText = optlist[x].strip('--')
                     keyValue = { optText : inputText }
-                    saveData[playbook].update(keyValue)
+                    saveData[playbookBaseName].update(keyValue)
             json.dump(saveData, saveFile, indent=4)
             saveFile.write("\n")
             saveFile.close()

@@ -1,0 +1,18 @@
+---
+- name: Mount arch export 
+  become: true
+  become_user: root
+  mount: 
+    state: mounted
+    path: "{{ archmount }}"
+    src: "{{ lif }}:{{ archvolume }}" 
+    opts: "{{ options }}"
+    fstype: nfs
+- name: Set mount point owner and group
+  become: true
+  become_user: root
+  file: 
+    path: "{{ archmount }}"
+    owner: "{{ owner }}"
+    group: "{{ group }}"
+    state: directory 

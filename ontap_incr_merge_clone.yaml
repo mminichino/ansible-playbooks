@@ -10,6 +10,7 @@
 # var:run_backup
 # var:junction_path
 # var:clone_name
+# var:number
 # var:mount_clone
 # var:clone_srv_ip
 # var:dest_host_name

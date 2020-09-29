@@ -13,7 +13,26 @@
 # var:db_clone_name
 # var:arch_clone_name
 # var:number
+# var:mount_clone
+# var:clone_srv_ip
+# var:dest_host_name
+# var:dest_dbmount_point
+# var:dest_archmount_point
+# var:dest_mount_owner
+# var:dest_mount_group
+# var:dest_nfs_options
 #
+- hosts: "{{ dest_host_name if dest_host_name is defined else 'localhost' }}"
+  gather_facts: no
+  vars:
+    dbmount: "{{ dest_dbmount_point if dest_dbmount_point is defined else '/mnt' }}"
+    archmount: "{{ dest_archmount_point if dest_archmount_point is defined else '/mnt' }}"
+    runumount: "{{ mount_clone if mount_clone is defined else 'false'|bool }}"
+  tasks:
+    - include_tasks: unmount_db_tasks.yaml
+      when: runumount|bool == true
+    - include_tasks: unmount_arch_tasks.yaml
+      when: runumount|bool == true
 - name: Delete Old Clone
   hosts: localhost
   vars:
@@ -230,3 +249,25 @@
             junction_path: "{{ junction_arch }}"
             volume: "{{ archclone }}"
             space_reserve: none
+- hosts: "{{ dest_host_name if dest_host_name is defined else 'localhost' }}"
+  gather_facts: no
+  vars:
+    lif: "{{ clone_srv_ip if clone_srv_ip is defined else cluster_admin_ip }}"
+    dbmount: "{{ dest_dbmount_point if dest_dbmount_point is defined else '/mnt' }}"
+    archmount: "{{ dest_archmount_point if dest_archmount_point is defined else '/mnt' }}"
+    owner: "{{ dest_mount_owner if dest_mount_owner is defined else 'root' }}"
+    group: "{{ dest_mount_group if dest_mount_group is defined else 'root' }}"
+    options: "{{ dest_nfs_options if dest_nfs_options is defined else 'rw,bg,hard,nointr,rsize=65536,wsize=65536,tcp,actimeo=0,vers=4,timeo=600' }}"
+    clone_num: "{{ number if number is defined else 1 }}"
+    dbvolumename: "{{ db_vol_name if db_vol_name is defined else 'nfsvol' }}"
+    archvolumename: "{{ arch_vol_name if arch_vol_name is defined else 'nfsvol' }}"
+    dbclone: "{{ db_clone_name if db_clone_name is defined else dbvolumename + '_' + '%02d'|format(clone_num|int) }}"
+    archclone: "{{ arch_clone_name if arch_clone_name is defined else archvolumename + '_' + '%02d'|format(clone_num|int) }}"
+    dbvolume: "{{ junction_root + '/' + dbclone }}"
+    archvolume: "{{ junction_root + '/' + archclone }}"
+    runmount: "{{ mount_clone if mount_clone is defined else 'false'|bool }}"
+  tasks:
+    - include_tasks: mount_db_tasks.yaml
+      when: runmount|bool == true
+    - include_tasks: mount_arch_tasks.yaml
+      when: runmount|bool == true
