@@ -30,6 +30,7 @@
         tiering_policy: "{{ tier }}"
         wait_for_completion: yes
         vserver: "{{ vserver }}"
+        space_guarantee: none
     - name: Move Volume
       na_ontap_volume:
         hostname: "{{ hostname }}"
@@ -42,3 +43,4 @@
         aggregate_name: "{{ aggr }}" 
         wait_for_completion: yes
         vserver: "{{ vserver }}"
+        space_guarantee: none

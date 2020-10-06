@@ -55,6 +55,7 @@
         policy: "{{ export }}"
         aggregate_name: "{{ aggr }}"
         atime_update: "{{ atime }}"
+        space_guarantee: none
 - hosts: "{{ dest_host_name if dest_host_name is defined else 'localhost' }}"
   gather_facts: no
   name: Mount Volume
