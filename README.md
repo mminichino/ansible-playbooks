@@ -29,3 +29,15 @@ $ ./ansible-helper.py mount_ontap_nfs_share.yaml -p
 ````
 
 To see verbose Ansible output, use the -d option, and to do a dry run use the -c option.
+
+To save variable values to quickly replay a scenario with a specific playbook:
+
+````
+$ ./ansible-helper.py ontap_incr_merge_clone.yaml -s testdb_copy
+````
+
+To replay a scenario that was previously saved:
+
+````
+$ ./ansible-helper.py ontap_incr_merge_clone.yaml -r testdb_copy
+````
