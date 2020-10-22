@@ -160,7 +160,7 @@
     vserver: "{{ svm_name if svm_name is defined else 'svm0' }}"
     clone_num: "{{ number if number is defined else 1 }}"
     junction: "{{ junction_root if junction_root is defined else '/oradata' }}"
-    thawcmd: "{{ freeze_cmd if freeze_cmd is defined else '/home/oracle/oracle-scripts/db-hot-backup.sh -e -s ' + oracle_sid }}"
+    thawcmd: "{{ freeze_cmd if freeze_cmd is defined else '/home/oracle/oracle-scripts/db-hot-backup.sh -e -q -s ' + oracle_sid }}"
     snapshot: "clone_snapshot_{{ '%02d'|format(clone_num|int) }}"
     dbclone: "{{ db_clone_name if db_clone_name is defined else dbvolume + '_' + '%02d'|format(clone_num|int) }}"
     junction_db: "{{ junction_root + '/' + dbclone }}"
@@ -194,6 +194,7 @@
             space_reserve: none
       rescue:
         - name: Take databse out of backup mode
+          delegate_to: "{{ db_host_name }}"
           command: "{{ thawcmd }}"
         - meta: end_play
 - hosts: "{{ db_host_name }}"
