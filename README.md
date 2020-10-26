@@ -30,7 +30,7 @@ $ ./ansible-helper.py mount_ontap_nfs_share.yaml -p
 
 To see verbose Ansible output, use the -d option, and to do a dry run use the -c option.
 
-To save variable values to quickly replay a scenario with a specific playbook:
+You can save variable values to quickly replay a scenario with a specific playbook. You will be prompted for each parameter, and you can enter a value for that parameter that will be saved. Just hit enter if you don't want to save a value for that parameter. You will also be asked if you want to be prompted on replay to edit the saved value. If you select "y" then before the scenario is replayed, you will have a chance to edit that parameter.
 
 ````
 $ ./ansible-helper.py ontap_incr_merge_clone.yaml -s testdb_copy
