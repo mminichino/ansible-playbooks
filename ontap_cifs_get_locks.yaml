@@ -1,0 +1,37 @@
+---
+#
+# var:cluster_admin_ip
+# var:svm_name
+# var:vol_name
+# var:save_output
+# var:save_file
+#
+- hosts: localhost
+  name: Get Locks
+  vars:
+    hostname: "{{ cluster_admin_ip }}"
+    username: "{{ ontap_admin_user }}"
+    password: "{{ admin_password }}"
+    vserver: "{{ svm_name if svm_name is defined else 'svm0' }}"
+    volume: "{{ vol_name if vol_name is defined else '*' }}"
+    save: "{{ save_output if save_output is defined else 'false'|bool }}"
+    filename: "{{ save_file if save_file is defined else '/tmp/ansible-ontap.output' }}"
+  tasks:
+    - name: Run Command
+      na_ontap_command:
+        hostname: "{{ hostname }}"
+        username: "{{ username }}"
+        password: "{{ password }}"
+        command: ['vserver', 'locks', 'show', '-vserver', '{{ vserver }}', '-volume', '{{ volume }}', '-protocol', 'cifs', '-fields', 'volume,lockid,type']
+        privilege: 'advanced'
+        https: true
+        validate_certs: false
+        return_dict: true
+        include_lines: "{{ vserver }}"
+      register: lockinfo
+    - debug: var=lockinfo.msg.stdout_lines_filter
+    - local_action:
+        module: copy
+        content: "{{ lockinfo.msg.stdout_lines_filter | to_nice_json }}"
+        dest: "{{ filename }}"
+      when: save|bool == true

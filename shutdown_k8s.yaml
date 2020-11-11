@@ -1,7 +1,12 @@
 ---
+#
+# var:kube_hosts
+#
 - name: Stop k8s VMs
   hosts: localhost
   gather_facts: no
+  vars:
+    hostlist: "{{ kube_hosts if kube_hosts is defined else 'k8s' }}"
   tasks:
   - name: Set the state of kube host to power off
     vmware_guest_powerstate:
@@ -15,4 +20,4 @@
     delegate_to: localhost
     register: deploy
     with_items:
-      - "{{ kube_hosts }}"
+      - "{{ groups[hostlist] | reverse | list }}"

@@ -1,0 +1,45 @@
+---
+#
+# var:cluster_admin_ip
+# var:svm_name
+# var:vol_name
+# var:lock_uuid
+# var:lock_path
+#
+- hosts: localhost
+  name: Break Locks
+  vars:
+    hostname: "{{ cluster_admin_ip }}"
+    username: "{{ ontap_admin_user }}"
+    password: "{{ admin_password }}"
+    vserver: "{{ svm_name if svm_name is defined }}"
+    volume: "{{ vol_name if vol_name is defined }}"
+    uuid: "{{ lock_uuid if lock_uuid is defined }}"
+    path: "{{ lock_path if lock_path is defined }}"
+  tasks:
+    - name: UUID Break
+      na_ontap_command:
+        hostname: "{{ hostname }}"
+        username: "{{ username }}"
+        password: "{{ password }}"
+        command: ['vserver', 'locks', 'break', '-lockid', '{{ uuid }}']
+        privilege: 'advanced'
+        https: true
+        validate_certs: false
+        return_dict: true
+      when: uuid != ''
+    - name: Path Break
+      na_ontap_command:
+        hostname: "{{ hostname }}"
+        username: "{{ username }}"
+        password: "{{ password }}"
+        command: ['vserver', 'locks', 'break', '-vserver', '{{ vserver }}', '-path', '{{ path }}', '-volume', '{{ volume }}']
+        privilege: 'advanced'
+        https: true
+        validate_certs: false
+        return_dict: true
+      when: path != '' and volume != '' and vserver != ''
+    - debug:
+        msg:
+        - "No parameters defined"
+      when: uuid == '' and path == '' and volume == '' and vserver == ''
