@@ -21,6 +21,7 @@ def myinput(prompt, prefill):
     readline.set_pre_input_hook()
     return result
 
+os.environ['ANSIBLE_HOST_KEY_CHECKING'] = 'False'
 arglist = []
 optlist = []
 checkarg = False

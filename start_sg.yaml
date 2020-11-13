@@ -1,7 +1,12 @@
 ---
+#
+# var:host_group
+#
 - name: Start SG VMs
   hosts: localhost
   gather_facts: no
+  vars:
+    hostlist: "{{ host_group if host_group is defined else 'storagegrid' }}"
   tasks:
   - name: Set the state of SG Nodes to poweron
     vmware_guest_powerstate:
@@ -15,4 +20,4 @@
     delegate_to: localhost
     register: deploy
     with_items:
-      - "{{ sg_all_hosts }}"
+      - "{{ groups[hostlist] | list }}"

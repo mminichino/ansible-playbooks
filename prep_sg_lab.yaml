@@ -1,0 +1,159 @@
+---
+#
+# var:vsphere_address
+# var:vsphere_username
+# var:host_group
+# var:datacenter_name
+# var:folder_name
+# var:datastore_name
+# var:number
+# var:reset
+# var:snap_only
+# var:disk_size
+#
+- name: Prep SG Lab
+  hosts: localhost
+  gather_facts: no
+  vars:
+    hostlist: "{{ host_group if host_group is defined else 'sglab' }}"
+    datacenter: "{{ datacenter_name if datacenter_name is defined else 'sandbox' }}"
+    folder: "{{ folder_name if folder_name is defined else '' }}"
+    snap_num: "{{ number if number is defined else 1 }}"
+    snapshot: "snapshot_{{ '%02d'|format(snap_num|int) }}"
+    remove: "{{ reset if reset is defined else 'false'|bool }}"
+    datastore: "{{ datastore_name if datastore_name is defined }}"
+    snaponly: "{{ snap_only if snap_only is defined else 'false'|bool }}"
+    disksize: "{{ disk_size if disk_size is defined else '300' }}"
+  tasks:
+  - name: Get Datastore
+    vmware_guest_disk_info:
+      hostname: "{{ vsphere_address }}"
+      username: "{{ vsphere_username }}"
+      password: "{{ vsphere_password }}"
+      datacenter: "{{ datacenter }}"
+      validate_certs: no
+      folder: "{{ datacenter }}/vm/{{ folder }}"
+      name: "{{ item }}"
+    delegate_to: localhost
+    register: disk_info
+    with_items:
+      - "{{ groups[hostlist] | list }}"
+    when: hostvars['{{ item }}'].node_role == 'admin' and datastore == ''
+  - name: Set Datastore Name
+    set_fact:
+      datastore: "{{ disk_info.results[0].guest_disk_info['0'|quote].backing_datastore }}"
+    when: datastore == ''
+  - name: Remove Old Snapshots
+    vmware_guest_snapshot:
+      hostname: "{{ vsphere_address }}"
+      username: "{{ vsphere_username }}"
+      password: "{{ vsphere_password }}"
+      datacenter: "{{ datacenter }}"
+      validate_certs: no
+      folder: "{{ datacenter }}/vm/{{ folder }}"
+      name: "{{ item }}"
+      state: absent
+      snapshot_name: "{{ snapshot }}"
+    delegate_to: localhost
+    register: vmsnap
+    with_items:
+      - "{{ groups[hostlist] | list }}"
+    when: remove|bool == true and snaponly|bool == true
+  - name: Snapshot lab VMs
+    vmware_guest_snapshot:
+      hostname: "{{ vsphere_address }}"
+      username: "{{ vsphere_username }}"
+      password: "{{ vsphere_password }}"
+      datacenter: "{{ datacenter }}"
+      validate_certs: no
+      folder: "{{ datacenter }}/vm/{{ folder }}"
+      name: "{{ item }}"
+      state: present
+      snapshot_name: "{{ snapshot }}"
+      description: "{{ snapshot }}"
+    delegate_to: localhost
+    register: vmsnap
+    with_items:
+      - "{{ groups[hostlist] | list }}"
+    when: snaponly|bool == true
+  - name: Check Continue
+    meta: end_play
+    when: snaponly|bool == true
+  - name: Remove Data Disks
+    vmware_guest_disk:
+      hostname: "{{ vsphere_address }}"
+      username: "{{ vsphere_username }}"
+      password: "{{ vsphere_password }}"
+      datacenter: "{{ datacenter }}"
+      validate_certs: no
+      folder: "{{ datacenter }}/vm/{{ folder }}"
+      name: "{{ item }}"
+      disk:
+        - state: absent
+          scsi_controller: 0
+          unit_number: 1
+        - state: absent
+          scsi_controller: 0
+          unit_number: 2
+        - state: absent
+          scsi_controller: 0
+          unit_number: 3
+        - state: absent
+          scsi_controller: 0
+          unit_number: 4
+    delegate_to: localhost
+    register: vmdisk
+    with_items:
+      - "{{ groups[hostlist] | list }}"
+    when: hostvars['{{ item }}'].node_role == 'storage'
+  - name: Add Minimal Data Disks
+    vmware_guest_disk:
+      hostname: "{{ vsphere_address }}"
+      username: "{{ vsphere_username }}"
+      password: "{{ vsphere_password }}"
+      datacenter: "{{ datacenter }}"
+      validate_certs: no
+      folder: "{{ datacenter }}/vm/{{ folder }}"
+      name: "{{ item }}"
+      disk:
+        - state: present
+          scsi_controller: 0
+          unit_number: 1
+          type: thin
+          size_gb: "{{ disksize }}"
+          datastore: "{{ datastore }}"
+        - state: present
+          scsi_controller: 0
+          unit_number: 2
+          type: thin
+          size_gb: "{{ disksize }}"
+          datastore: "{{ datastore }}"
+        - state: present
+          scsi_controller: 0
+          unit_number: 3
+          type: thin
+          size_gb: "{{ disksize }}"
+          datastore: "{{ datastore }}"
+    delegate_to: localhost
+    register: vmdisk
+    with_items:
+      - "{{ groups[hostlist] | list }}"
+    when: hostvars['{{ item }}'].node_role == 'storage'
+  - name: Update VM Hardware
+    vmware_guest:
+      hostname: "{{ vsphere_address }}"
+      username: "{{ vsphere_username }}"
+      password: "{{ vsphere_password }}"
+      datacenter: "{{ datacenter }}"
+      validate_certs: no
+      folder: "{{ datacenter }}/vm/{{ folder }}"
+      name: "{{ item }}"
+      state: present
+      hardware:
+        num_cpus: 4
+        memory_mb: 8192
+        mem_reservation: 0
+    delegate_to: localhost
+    register: vmhw
+    with_items:
+      - "{{ groups[hostlist] | list }}"

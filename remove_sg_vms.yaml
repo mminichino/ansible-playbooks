@@ -1,22 +1,27 @@
 ---
 #
 # var:host_group
+# var:datacenter_name
+# var:folder_name
 #
-- name: Stop SG VMs
+- name: Remove SG VMs
   hosts: localhost
   gather_facts: no
   vars:
     hostlist: "{{ host_group if host_group is defined else 'storagegrid' }}"
+    datacenter: "{{ datacenter_name if datacenter_name is defined else 'sandbox' }}"
+    folder: "{{ folder_name if folder_name is defined else '' }}"
   tasks:
-  - name: Set the state of SG Nodes to power off
-    vmware_guest_powerstate:
+  - name: Remove SG VMs
+    vmware_guest:
       hostname: "{{ vsphere_address }}"
       username: "{{ vsphere_username }}"
       password: "{{ vsphere_password }}"
       validate_certs: no
-      folder: "{{ lab_vsphere_folder }}"
+      datacenter: "{{ datacenter }}"
+      folder: "{{ datacenter }}/vm/{{ folder }}"
       name: "{{ item }}"
-      state: shutdown-guest
+      state: absent
     delegate_to: localhost
     register: deploy
     with_items:

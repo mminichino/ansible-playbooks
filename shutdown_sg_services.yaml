@@ -1,11 +1,16 @@
 ---
+#
+# var:host_group
+#
 - hosts: localhost
   gather_facts: no
+  vars:
+    hostlist: "{{ host_group if host_group is defined else 'storagegrid' }}"
   tasks:
     - add_host:
         name: "{{ item }}"
         group: sgnodesreverse
-      with_items: "{{ groups['storagegrid'] | reverse | list }}"
+      with_items: "{{ groups[hostlist] | reverse | list }}"
 - hosts: sgnodesreverse
   gather_facts: no
   serial: 1
@@ -14,4 +19,4 @@
       command: service servermanager stop
       become: true
       become_user: root
-
+      ignore_unreachable: true

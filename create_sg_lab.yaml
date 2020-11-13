@@ -1,0 +1,89 @@
+---
+#
+# var:host_group
+# var:datacenter_name
+# var:folder_name
+# var:ds_name
+# var:cluster_name
+# var:ova_path
+# var:admin_ova
+# var:storage_ova
+#
+- name: Deploy Admin VM
+  hosts: localhost
+  gather_facts: no
+  vars:
+    hostlist: "{{ host_group if host_group is defined else 'storagegrid' }}"
+    datacenter: "{{ datacenter_name if datacenter_name is defined else 'sandbox' }}"
+    folder: "{{ folder_name if folder_name is defined else '' }}"
+    datastore: "{{ ds_name if ds_name is defined else 'Datastore01' }}"
+    ovapath: "{{ ova_path if ova_path is defined else '/var/tmp/storagegrid/vsphere' }}"
+    adminova: "{{ admin_ova if admin_ova is defined else 'sg-primary-admin.ova' }}"
+    storova: "{{ storage_ova if storage_ova is defined else 'sg-storage.ova' }}"
+    cluster: "{{ cluster_name if cluster_name is defined else 'prod' }}"
+  tasks:
+  - name: Set Admin IP
+    set_fact:
+      adminip: "{{ hostvars[item].ansible_host }}"
+    with_items:
+      - "{{ groups[hostlist] | list }}"
+    when: hostvars[item].node_role == 'admin'
+  - name: Deploy Admin OVF
+    community.vmware.vmware_deploy_ovf:
+      hostname: "{{ vsphere_address }}"
+      username: "{{ vsphere_username }}"
+      password: "{{ vsphere_password }}"
+      validate_certs: no
+      name: "{{ item }}"
+      datacenter: "{{ datacenter }}"
+      folder: "{{ datacenter }}/vm/{{ folder }}"
+      datastore: "{{ datastore }}"
+      disk_provisioning: "thin"
+      cluster: "{{ cluster }}"
+      networks:
+        "Grid Network": "Storage Network"
+        "Admin Network": "Management Network"
+        "Client Network": "Object Client Network"
+      ovf: "{{ ovapath }}/{{ adminova }}"
+      power_on: no
+      properties:
+        NODE_NAME: "{{ item }}"
+        GRID_NETWORK_CONFIG: "STATIC"
+        GRID_NETWORK_IP: "{{ hostvars[item].ansible_host }}"
+        GRID_NETWORK_MASK: "{{ hostvars[item].grid_mask }}"
+        GRID_NETWORK_GATEWAY: "{{ hostvars[item].grid_gw }}"
+        GRID_NETWORK_MTU: "{{ hostvars[item].grid_mtu }}"
+    delegate_to: localhost
+    with_items:
+      - "{{ groups[hostlist] | list }}"
+    when: hostvars[item].node_role == 'admin'
+  - name: Deploy Storage OVF
+    community.vmware.vmware_deploy_ovf:
+      hostname: "{{ vsphere_address }}"
+      username: "{{ vsphere_username }}"
+      password: "{{ vsphere_password }}"
+      validate_certs: no
+      name: "{{ item }}"
+      datacenter: "{{ datacenter }}"
+      folder: "{{ datacenter }}/vm/{{ folder }}"
+      datastore: "{{ datastore }}"
+      disk_provisioning: "thin"
+      cluster: "{{ cluster }}"
+      networks:
+        "Grid Network": "Storage Network"
+        "Admin Network": "Management Network"
+        "Client Network": "Object Client Network"
+      ovf: "{{ ovapath }}/{{ storova }}"
+      power_on: no
+      properties:
+        NODE_NAME: "{{ item }}"
+        GRID_NETWORK_CONFIG: "STATIC"
+        GRID_NETWORK_IP: "{{ hostvars[item].ansible_host }}"
+        GRID_NETWORK_MASK: "{{ hostvars[item].grid_mask }}"
+        GRID_NETWORK_GATEWAY: "{{ hostvars[item].grid_gw }}"
+        GRID_NETWORK_MTU: "{{ hostvars[item].grid_mtu }}"
+        ADMIN_IP: "{{ adminip }}"
+    delegate_to: localhost
+    with_items:
+      - "{{ groups[hostlist] | list }}"
+    when: hostvars[item].node_role == 'storage'
