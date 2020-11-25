@@ -1,14 +1,18 @@
 ---
 #
 # var:host_group
+# var:force
 #
 - name: Stop SG VMs
   hosts: localhost
   gather_facts: no
   vars:
     hostlist: "{{ host_group if host_group is defined else 'storagegrid' }}"
+    power_flag: "{{ force if force is defined else 'false'|bool }}"
+    power_state: "{{ 'powered-off' if (power_flag|bool == true) else 'shutdown-guest' }}"
   tasks:
   - name: Set the state of SG Nodes to power off
+    ignore_errors: yes
     vmware_guest_powerstate:
       hostname: "{{ vsphere_address }}"
       username: "{{ vsphere_username }}"
@@ -16,7 +20,7 @@
       validate_certs: no
       folder: "{{ lab_vsphere_folder }}"
       name: "{{ item }}"
-      state: shutdown-guest
+      state: "{{ power_state }}"
     delegate_to: localhost
     register: deploy
     with_items:

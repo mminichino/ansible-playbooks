@@ -4,3 +4,4 @@ update_oslab_template.yaml
 group_vars/
 esxi_node_shutdown_prep.yaml
 esxi_node_startup_prep.yaml
+*.save

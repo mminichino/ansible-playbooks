@@ -1,0 +1,74 @@
+---
+#
+# var:admin_node
+# var:tenant_name
+# var:bucket_name
+#
+- name: Create Lab Default Tenant
+  hosts: localhost
+  gather_facts: no
+  collections:
+  - netapp.storagegrid
+  vars:
+    tenant: "{{ tenant_name if tenant_name is defined else 'Default' }}"
+    bucket: "{{ bucket_name if bucket_name is defined else 'test' }}"
+  tasks:
+  - name: Get grid authorization token
+    uri:
+      url: "https://{{ admin_node }}/api/v3/authorize"
+      method: POST
+      body: {
+        "username": "root",
+        "password": "{{ admin_password }}",
+        "cookie": false,
+        "csrfToken": false
+      }
+      body_format: json
+      validate_certs: false
+    register: auth
+  - name: Create the Default StorageGRID Tenant
+    na_sg_grid_account:
+       api_url: "https://{{ admin_node }}"
+       auth_token: "{{ auth.json.data }}"
+       validate_certs: false
+       state: present
+       name: "{{ tenant }}"
+       protocol: s3
+       management: true
+       use_own_identity_source: true
+       allow_platform_services: true
+       password: "{{ admin_password }}"
+    register: account
+  - name: Get user authorization token
+    uri:
+      url: "https://{{ admin_node }}/api/v3/authorize"
+      method: POST
+      body: {
+        "accountId": "{{ account.resp.id }}",
+        "username": "root",
+        "password": "{{ admin_password }}",
+        "cookie": false,
+        "csrfToken": false
+      }
+      body_format: json
+      validate_certs: false
+    register: auth
+  - name: Create s3 key for root user
+    na_sg_org_user_s3_key:
+      api_url: "https://{{ admin_node }}"
+      auth_token: "{{ auth.json.data }}"
+      validate_certs: false
+      state: present
+      unique_user_name: "user/root"
+    register: rootkey
+  - debug:
+      msg:
+      - "Access Key: {{ rootkey.resp.accessKey }}"
+      - "Secret Key: {{ rootkey.resp.secretAccessKey }}"
+  - name: Create test s3 bucket
+    na_sg_org_container:
+      api_url: "https://{{ admin_node }}"
+      auth_token: "{{ auth.json.data }}"
+      validate_certs: false
+      state: present
+      name: "{{ bucket }}"
