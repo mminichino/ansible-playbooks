@@ -6,12 +6,12 @@
 #
 - name: Create Lab Default Tenant
   hosts: localhost
-  gather_facts: no
   collections:
   - netapp.storagegrid
   vars:
     tenant: "{{ tenant_name if tenant_name is defined else 'Default' }}"
     bucket: "{{ bucket_name if bucket_name is defined else 'test' }}"
+    silence_time: "{{ '%Y-%m-%dT%H:%M:%S.0Z' | strftime( ( ansible_date_time.epoch | int ) + ( 86400 * 365 )  ) }}"
   tasks:
   - name: Get grid authorization token
     uri:
@@ -39,7 +39,7 @@
        allow_platform_services: true
        password: "{{ admin_password }}"
     register: account
-  - name: Get user authorization token
+  - name: Get tenant authorization token
     uri:
       url: "https://{{ admin_node }}/api/v3/authorize"
       method: POST
@@ -52,11 +52,11 @@
       }
       body_format: json
       validate_certs: false
-    register: auth
+    register: tenant_auth
   - name: Create s3 key for root user
     na_sg_org_user_s3_key:
       api_url: "https://{{ admin_node }}"
-      auth_token: "{{ auth.json.data }}"
+      auth_token: "{{ tenant_auth.json.data }}"
       validate_certs: false
       state: present
       unique_user_name: "user/root"
@@ -68,7 +68,28 @@
   - name: Create test s3 bucket
     na_sg_org_container:
       api_url: "https://{{ admin_node }}"
-      auth_token: "{{ auth.json.data }}"
+      auth_token: "{{ tenant_auth.json.data }}"
       validate_certs: false
       state: present
       name: "{{ bucket }}"
+  - name: Silence memory alert
+    uri:
+      url: "https://{{ admin_node }}/api/v3/grid/alert-silences"
+      headers:
+        Authorization: "Bearer {{ auth.json.data }}"
+      method: POST
+      body: {
+        "endTime": "{{ silence_time }}",
+        "comment": "This is a lab grid.",
+        "maximumSeverity": "critical",
+        "matchers": [
+          {
+            "name": "alertname",
+            "value": "Low installed node memory"
+          }
+        ]
+      }
+      body_format: json
+      status_code: 201
+      validate_certs: false
+    register: silence
