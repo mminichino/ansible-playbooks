@@ -5,7 +5,20 @@
 # var:lookup_password
 # var:vol_name
 # var:svm_name
+# var:host_name
+# var:mount_point
+# var:unmount_volume
 #
+- hosts: "{{ host_name if host_name is defined else 'localhost' }}"
+  gather_facts: no
+  name: Unmount Volume
+  vars:
+    volume: "{{ vol_name if vol_name is defined else 'nfsvol' }}"
+    mount: "{{ mount_point if mount_point is defined else '/' + volume }}"
+    rununmount: "{{ unmount_volume if unmount_volume is defined else 'false'|bool }}"
+  tasks:
+    - include_tasks: unmount_nfs_tasks.yaml
+      when: rununmount|bool == true
 - hosts: localhost
   gather_facts: no
   name: Volume Delete

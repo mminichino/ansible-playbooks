@@ -5,7 +5,7 @@
   mount: 
     state: mounted
     path: "{{ mount }}"
-    src: "{{ lif }}:{{ volume }}" 
+    src: "{{ lif }}:{{ junction }}" 
     opts: "{{ options }}"
     fstype: nfs
 - name: Set mount point owner and group

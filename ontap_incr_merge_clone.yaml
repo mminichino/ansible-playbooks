@@ -139,7 +139,7 @@
     clone_num: "{{ number if number is defined else 1 }}"
     clone_volume: "{{ vol_name if vol_name is defined else 'nfsvol' }}"
     clone: "{{ clone_name if clone_name is defined else clone_volume + '_' + '%02d'|format(clone_num|int) }}"
-    volume: "{{ junction_path + '/' + clone if junction_path is defined else '/' + clone }}"
+    junction: "{{ junction_path + '/' + clone if junction_path is defined else '/' + clone }}"
     runmount: "{{ mount_clone if mount_clone is defined else 'false'|bool }}"
   tasks:
     - include_tasks: mount_nfs_tasks.yaml

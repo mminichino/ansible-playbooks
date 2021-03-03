@@ -1,0 +1,16 @@
+---
+- name: Get SVM Info
+  na_ontap_info:
+    hostname: "{{ hostname }}"
+    username: "{{ username }}"
+    password: "{{ password }}"
+    https: true
+    validate_certs: false
+    gather_subset: "net_interface_info"
+  register: ontap_info
+- name: Get LIF
+  set_fact:
+    cacheable: true
+    svm_nfs_lif: "{{ ontap_info.ontap_info.net_interface_info[item].address }}"
+  with_items: "{{ ontap_info.ontap_info.net_interface_info }}"
+  when: ontap_info.ontap_info.net_interface_info[item].vserver == vserver and 'nfs' in ontap_info.ontap_info.net_interface_info[item].data_protocols.data_protocol

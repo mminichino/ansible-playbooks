@@ -13,7 +13,7 @@
   serial: 1
   vars:
     lif: "{{ nfs_server if nfs_server is defined else cluster_admin_ip }}"
-    volume: "{{ share_path if share_path is defined else 'nfsvol' }}"
+    junction: "{{ share_path if share_path is defined else '/nfsvol' }}"
     mount: "{{ mount_point if mount_point is defined else '/mnt' }}"
     owner: "{{ mount_owner if mount_owner is defined else 'root' }}"
     group: "{{ mount_group if mount_group is defined else 'root' }}"
