@@ -1,6 +1,8 @@
 ---
 #
 # var:cluster_admin_ip
+# var:ontap_user
+# var:lookup_password
 # var:db_host_name
 # var:oracle_sid
 # var:backup_cmd
@@ -21,8 +23,8 @@
   hosts: localhost
   vars:
     hostname: "{{ cluster_admin_ip }}"
-    username: "{{ admin_user }}"
-    password: "{{ admin_password }}"
+    username: "{{ ontap_user }}"
+    password: "{{ ask_password if ask_password is defined else lookup('vars',lookup_password) if lookup_password is defined else ontap_password }}"
     volume: "{{ vol_name if vol_name is defined else 'nfsvol' }}"
     vserver: "{{ svm_name if svm_name is defined else 'svm0' }}"
     snapshot: "{{ 'snapshot_backup_' + ansible_date_time.iso8601_basic_short }}"

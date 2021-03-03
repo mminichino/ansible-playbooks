@@ -1,6 +1,8 @@
 ---
 #
 # var:cluster_admin_ip
+# var:ontap_user
+# var:lookup_password
 # var:db_host_name
 # var:oracle_sid
 # var:backup_cmd
@@ -37,8 +39,8 @@
   hosts: localhost
   vars:
     hostname: "{{ cluster_admin_ip }}"
-    username: "{{ admin_user }}"
-    password: "{{ admin_password }}"
+    username: "{{ ontap_user }}"
+    password: "{{ ask_password if ask_password is defined else lookup('vars',lookup_password) if lookup_password is defined else ontap_password }}"
     dbvolume: "{{ db_vol_name if db_vol_name is defined else 'nfsvol' }}"
     archvolume: "{{ arch_vol_name if arch_vol_name is defined else 'nfsvol' }}"
     vserver: "{{ svm_name if svm_name is defined else 'svm0' }}"
@@ -154,16 +156,16 @@
   hosts: localhost
   vars:
     hostname: "{{ cluster_admin_ip }}"
-    username: "{{ admin_user }}"
-    password: "{{ admin_password }}"
+    username: "{{ ontap_user }}"
+    password: "{{ ask_password if ask_password is defined else lookup('vars',lookup_password) if lookup_password is defined else ontap_password }}"
     dbvolume: "{{ db_vol_name if db_vol_name is defined else 'nfsvol' }}"
     vserver: "{{ svm_name if svm_name is defined else 'svm0' }}"
     clone_num: "{{ number if number is defined else 1 }}"
-    junction: "{{ junction_root if junction_root is defined else '/oradata' }}"
+    junction: "{{ junction_root + '/' if junction_root is defined else '/' }}"
     thawcmd: "{{ freeze_cmd if freeze_cmd is defined else '/home/oracle/oracle-scripts/db-hot-backup.sh -e -q -s ' + oracle_sid }}"
     snapshot: "clone_snapshot_{{ '%02d'|format(clone_num|int) }}"
     dbclone: "{{ db_clone_name if db_clone_name is defined else dbvolume + '_' + '%02d'|format(clone_num|int) }}"
-    junction_db: "{{ junction_root + '/' + dbclone }}"
+    junction_db: "{{ junction_root + dbclone }}"
   tasks:
     - name: DB Volume Clone
       block:
@@ -213,15 +215,15 @@
   hosts: localhost
   vars:
     hostname: "{{ cluster_admin_ip }}"
-    username: "{{ admin_user }}"
-    password: "{{ admin_password }}"
+    username: "{{ ontap_user }}"
+    password: "{{ ask_password if ask_password is defined else lookup('vars',lookup_password) if lookup_password is defined else ontap_password }}"
     archvolume: "{{ arch_vol_name if arch_vol_name is defined else 'nfsvol' }}"
     vserver: "{{ svm_name if svm_name is defined else 'svm0' }}"
     clone_num: "{{ number if number is defined else 1 }}"
-    junction: "{{ junction_root if junction_root is defined else '/oradata' }}"
+    junction: "{{ junction_root + '/' if junction_root is defined else '/' }}"
     snapshot: "clone_snapshot_{{ '%02d'|format(clone_num|int) }}"
     archclone: "{{ arch_clone_name if arch_clone_name is defined else archvolume + '_' + '%02d'|format(clone_num|int) }}"
-    junction_arch: "{{ junction_root + '/' + archclone }}"
+    junction_arch: "{{ junction_root + archclone }}"
   tasks:
     - name: DB Volume Clone
       block:
@@ -264,8 +266,8 @@
     archvolumename: "{{ arch_vol_name if arch_vol_name is defined else 'nfsvol' }}"
     dbclone: "{{ db_clone_name if db_clone_name is defined else dbvolumename + '_' + '%02d'|format(clone_num|int) }}"
     archclone: "{{ arch_clone_name if arch_clone_name is defined else archvolumename + '_' + '%02d'|format(clone_num|int) }}"
-    dbvolume: "{{ junction_root + '/' + dbclone }}"
-    archvolume: "{{ junction_root + '/' + archclone }}"
+    dbvolume: "{{ junction_root + '/' + dbclone if junction_root is defined else '/' + dbclone }}"
+    archvolume: "{{ junction_root + '/' + archclone if junction_root is defined else '/' + archclone }}"
     runmount: "{{ mount_clone if mount_clone is defined else 'false'|bool }}"
   tasks:
     - include_tasks: mount_db_tasks.yaml

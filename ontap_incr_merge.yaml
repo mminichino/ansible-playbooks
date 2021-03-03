@@ -1,6 +1,8 @@
 ---
 #
 # var:cluster_admin_ip
+# var:ontap_user
+# var:lookup_password
 # var:db_host_name
 # var:oracle_sid
 # var:backup_cmd
@@ -26,13 +28,13 @@
   hosts: localhost
   vars:
     hostname: "{{ cluster_admin_ip }}"
-    username: "{{ admin_user }}"
-    password: "{{ admin_password }}"
+    username: "{{ ontap_user }}"
+    password: "{{ ask_password if ask_password is defined else lookup('vars',lookup_password) if lookup_password is defined else ontap_password }}"
     volume: "{{ vol_name if vol_name is defined else 'nfsvol' }}"
     vserver: "{{ svm_name if svm_name is defined else 'svm0' }}"
     snapshot: "{{ 'snapshot_clone_' + ansible_date_time.iso8601_basic_short }}"
     clone: "{{ clone_name if clone_name is defined else dbvolume + '_1' }}"
-    junction: "{{ junction_path + '/' + clone }}"
+    junction: "{{ junction_path + '/' + clone if junction_path is defined else '/' + clone }}"
     backupcmd: "{{ backup_cmd if backup_cmd is defined else '/home/oracle/oracle-scripts/db-hot-backup.sh -e -s ' + oracle_sid }}"
     snap_num: "{{ number if number is defined else 10 }}"
     snap_start: "{{ 1 }}"

@@ -1,10 +1,15 @@
 ---
+#
+# var:cluster_admin_ip
+# var:ontap_user
+# var:lookup_password
+#
 - hosts: localhost
   name: Node Shutdown
   vars:
-    hostname: "{{ filer_hostname }}"
-    username: "{{ ontap_admin_user }}"
-    password: "{{ admin_password }}"
+    hostname: "{{ cluster_admin_ip }}"
+    username: "{{ ontap_user }}"
+    password: "{{ ask_password if ask_password is defined else lookup('vars',lookup_password) if lookup_password is defined else ontap_password }}"
   tasks:
     - name: Shutdown
       na_ontap_command:

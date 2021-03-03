@@ -12,6 +12,8 @@ import json
 import re
 import fnmatch
 import readline
+import getpass
+import ansible.constants as C
 
 class ErrorExit(Exception):
     def __init__(self, *args, **kwargs):
@@ -41,12 +43,14 @@ class argset:
         self.savearg = False
         self.readarg = False
         self.listarg = False
+        self.askarg = False
         self.saveFileKey = None
         self.addArg("c", "check", True)
         self.addArg("p", "print", True)
         self.addArg("d", "debug", True)
         self.addArg("l", "list", True)
         self.addArg("h", "help", True)
+        self.addArg("a", "ask", True)
         self.addArg("s", "save", False)
         self.addArg("r", "read", False)
 
@@ -97,6 +101,8 @@ class argset:
                 self.checkarg = True
             elif opt in ('-d', '--debug'):
                 self.debugarg = True
+            elif opt in ('-a', '--ask'):
+                self.askarg = True
             elif opt in ('-p', '--print'):
                 if len(options) != 1:
                     print("Print option can not be combined with other options.")
@@ -161,6 +167,40 @@ class playrun:
         self.playName = os.path.splitext(self.playBasename)[0]
         self.playSaveFile = self.playDirname + "/" + self.playName + ".save"
         self.playSaveContents = {}
+        self.vaultPasswordFile = None
+
+        if os.getenv('ANSIBLE_CONFIG'):
+            self.ansibleConfig = os.getenv('ANSIBLE_CONFIG')
+        elif os.path.exists("ansible.cfg"):
+            self.ansibleConfig = "ansible.cfg"
+        elif os.path.exists("~/.ansible.cfg"):
+            self.ansibleConfig = "ansible.cfg"
+        elif os.path.exists("/etc/ansible/ansible.cfg"):
+            self.ansibleConfig = "/etc/ansible/ansible.cfg"
+        else:
+            self.ansibleConfig = None
+
+        if self.ansibleConfig:
+            try:
+                with open(self.ansibleConfig, 'r') as configFile:
+                    while True:
+                       line = configFile.readline()
+                       line = line.replace(" ", "")
+                       line = line.rstrip("\n")
+                       if not line:
+                           break
+                       if not line.startswith("#"):
+                           try:
+                               key,value = line.split("=")
+                               if key == "vault_password_file":
+                                   if os.path.exists(value):
+                                       self.vaultPasswordFile = value
+                           except ValueError:
+                               continue
+                    configFile.close()
+            except OSError as e:
+                print("Could not read ansible config file: %s" % str(e))
+                sys.exit(1)
 
     def listSavedPlays(self):
         self.storeSavedPlay()
@@ -259,6 +299,15 @@ class playrun:
         runcmd = ''
         extravarjson = ''
 
+        if self.runargs.askarg:
+            try:
+                inputPassword = getpass.getpass()
+            except Exception as e:
+                print("Can not read password input: %s" % str(e))
+            else:
+                extravaritem = '"ask_password":"' + inputPassword + '"'
+                self.runargs.extravars.append(extravaritem)
+
         if self.runargs.extravars:
             extravarjson = '\'{'
             for x in range(len(self.runargs.extravars)-1):
@@ -270,6 +319,8 @@ class playrun:
 
         cmdlist.append("ansible-playbook")
         cmdlist.append(self.runargs.playbook)
+        if not self.vaultPasswordFile:
+            cmdlist.append('--ask-vault-pass')
         cmdlist.append(extravarexec)
         if self.runargs.checkarg:
             cmdlist.append('--check')
@@ -282,7 +333,8 @@ class playrun:
             else:
                 runcmd = runcmd + ' ' + cmdlist[x]
 
-        print (runcmd)
+        if not self.runargs.askarg:
+            print (runcmd)
         os.system(runcmd)
 
 def main():

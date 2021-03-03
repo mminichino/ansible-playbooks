@@ -1,6 +1,8 @@
 ---
 #
 # var:cluster_admin_ip
+# var:ontap_user
+# var:lookup_password
 # var:vol_name
 # var:tier_policy
 # var:svm_name
@@ -10,8 +12,8 @@
   name: Volume Move
   vars:
     hostname: "{{ cluster_admin_ip }}"
-    username: "{{ admin_user }}"
-    password: "{{ admin_password }}"
+    username: "{{ ontap_user }}"
+    password: "{{ ask_password if ask_password is defined else lookup('vars',lookup_password) if lookup_password is defined else ontap_password }}"
     volume: "{{ vol_name if vol_name is defined else 'nfsvol' }}"
     tier: "{{ tier_policy if tier_policy is defined else 'none' }}"
     vserver: "{{ svm_name if svm_name is defined else 'svm0' }}"

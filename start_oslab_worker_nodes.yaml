@@ -1,0 +1,36 @@
+---
+#
+# var:folder
+#
+- name: Start oslab master VMs
+  hosts: localhost
+  vars:
+    folder_name: "{{ folder if folder is defined else 'oslab' }}"
+    master_node_names: []
+  tasks:
+  - name: Get VM Names
+    vmware_vm_info:
+      hostname: "{{ vsphere_address }}"
+      username: "{{ vsphere_username }}"
+      password: "{{ vsphere_password }}"
+      validate_certs: no
+      folder: "{{ vsphere_datacenter }}/vm/{{ folder }}"
+    delegate_to: localhost
+    register: vm_info
+  - name: Build VM list
+    set_fact:
+      master_node_names: "{{ master_node_names }} + [ '{{ item.guest_name }}' ]"
+    with_items: "{{ vm_info.virtual_machines }}"
+    when: item.guest_name is match(".*-worker-.*")
+  - name: Start master node VMs
+    vmware_guest_powerstate:
+      hostname: "{{ vsphere_address }}"
+      username: "{{ vsphere_username }}"
+      password: "{{ vsphere_password }}"
+      validate_certs: no
+      folder: "{{ folder }}"
+      name: "{{ item }}"
+      state: powered-on
+    delegate_to: localhost
+    register: deploy
+    with_items: "{{ master_node_names | list }}"

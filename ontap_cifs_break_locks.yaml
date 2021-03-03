@@ -1,6 +1,8 @@
 ---
 #
 # var:cluster_admin_ip
+# var:ontap_user
+# var:lookup_password
 # var:svm_name
 # var:vol_name
 # var:lock_uuid
@@ -10,8 +12,8 @@
   name: Break Locks
   vars:
     hostname: "{{ cluster_admin_ip }}"
-    username: "{{ ontap_admin_user }}"
-    password: "{{ admin_password }}"
+    username: "{{ ontap_user }}"
+    password: "{{ ask_password if ask_password is defined else lookup('vars',lookup_password) if lookup_password is defined else ontap_password }}"
     vserver: "{{ svm_name if svm_name is defined }}"
     volume: "{{ vol_name if vol_name is defined }}"
     uuid: "{{ lock_uuid if lock_uuid is defined }}"

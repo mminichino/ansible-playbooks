@@ -1,6 +1,8 @@
 ---
 #
 # var:cluster_admin_ip
+# var:ontap_user
+# var:lookup_password
 # var:vol_name
 # var:svm_name
 # var:junction_path
@@ -24,8 +26,8 @@
   name: Volume Create
   vars:
     hostname: "{{ cluster_admin_ip }}"
-    username: "{{ admin_user }}"
-    password: "{{ admin_password }}"
+    username: "{{ ontap_user }}"
+    password: "{{ ask_password if ask_password is defined else lookup('vars',lookup_password) if lookup_password is defined else ontap_password }}"
     volume: "{{ vol_name if vol_name is defined else 'nfsvol' }}"
     vserver: "{{ svm_name if svm_name is defined else 'svm0' }}"
     volsize: "{{ vol_size if vol_size is defined else '20' }}"
@@ -33,7 +35,7 @@
     tier: "{{ tier_policy if tier_policy is defined else 'none' }}"
     snapdir: "{{ snapdir_access if snapdir_access is defined else 'no' }}"
     export: "{{ export_policy if export_policy is defined else 'default' }}"
-    junction: "{{ junction_path + '/' + volume }}"
+    junction: "{{ junction_path + '/' + volume if junction_path is defined else '/' + volume }}"
     aggr: "{{ aggregate_name if aggregate_name is defined else 'aggr1' }}"
     atime: "{{ atime_update if atime_update is defined else 'yes' }}"
   tasks:
@@ -65,7 +67,7 @@
     owner: "{{ dest_mount_owner if dest_mount_owner is defined else 'root' }}"
     group: "{{ dest_mount_group if dest_mount_group is defined else 'root' }}"
     options: "{{ dest_nfs_options if dest_nfs_options is defined else 'rw,bg,hard,nointr,rsize=65536,wsize=65536,tcp,actimeo=0,vers=4,timeo=600' }}"
-    volume: "{{ junction_path + '/' + vol_name }}"
+    volume: "{{ junction_path + '/' + vol_name if junction_path is defined else '/' + vol_name }}"
     runmount: "{{ mount_volume if mount_volume is defined else 'false'|bool }}"
   tasks:
     - include_tasks: mount_nfs_tasks.yaml

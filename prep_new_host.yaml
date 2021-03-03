@@ -1,0 +1,43 @@
+---
+#
+# var:node_list
+# var:uid
+# var:gid
+#
+- name: Prep New Host
+  hosts: "{{ node_list if node_list is defined else 'development' }}"
+  vars:
+    group_id: "{{ gid if gid is defined else '1000' }}"
+    user_id: "{{ uid if uid is defined else '1000' }}"
+    password: "{{ admin_secure_password | password_hash('sha512', admin_password) }}"
+  tasks:
+  - name: Create admin group
+    group:
+      name: admin
+      gid: "{{ group_id }}"
+    become: yes
+  - name: Create admin account
+    user:
+      name: admin
+      comment: Admin User
+      uid: "{{ user_id }}"
+      group: admin
+      generate_ssh_key: yes
+      ssh_key_bits: 2048
+      ssh_key_file: .ssh/id_rsa
+      password: "{{ password }}"
+    become: yes
+  - name: Create authorized_key file
+    ansible.posix.authorized_key:
+      user: admin
+      state: present
+      key: "{{ lookup('file', '/home/admin/.ssh/id_rsa.pub') }}"
+    become: yes
+  - name: Add admin to sudoers
+    lineinfile:
+      path: /etc/sudoers
+      state: present
+      regexp: '^%admin ALL='
+      line: '%admin ALL=(ALL) NOPASSWD: ALL'
+      validate: /usr/sbin/visudo -cf %s
+    become: yes
