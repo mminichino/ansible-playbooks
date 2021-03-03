@@ -39,7 +39,7 @@
   hosts: localhost
   vars:
     hostname: "{{ cluster_admin_ip }}"
-    username: "{{ ontap_user }}"
+    username: "{{ ontap_user if ontap_user is defined else 'admin' }}"
     password: "{{ ask_password if ask_password is defined else lookup('vars',lookup_password) if lookup_password is defined else ontap_password }}"
     dbvolume: "{{ db_vol_name if db_vol_name is defined else 'nfsvol' }}"
     archvolume: "{{ arch_vol_name if arch_vol_name is defined else 'nfsvol' }}"
@@ -156,7 +156,7 @@
   hosts: localhost
   vars:
     hostname: "{{ cluster_admin_ip }}"
-    username: "{{ ontap_user }}"
+    username: "{{ ontap_user if ontap_user is defined else 'admin' }}"
     password: "{{ ask_password if ask_password is defined else lookup('vars',lookup_password) if lookup_password is defined else ontap_password }}"
     dbvolume: "{{ db_vol_name if db_vol_name is defined else 'nfsvol' }}"
     vserver: "{{ svm_name if svm_name is defined else 'svm0' }}"
@@ -215,7 +215,7 @@
   hosts: localhost
   vars:
     hostname: "{{ cluster_admin_ip }}"
-    username: "{{ ontap_user }}"
+    username: "{{ ontap_user if ontap_user is defined else 'admin' }}"
     password: "{{ ask_password if ask_password is defined else lookup('vars',lookup_password) if lookup_password is defined else ontap_password }}"
     archvolume: "{{ arch_vol_name if arch_vol_name is defined else 'nfsvol' }}"
     vserver: "{{ svm_name if svm_name is defined else 'svm0' }}"

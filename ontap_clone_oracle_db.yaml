@@ -25,13 +25,13 @@
   hosts: localhost
   vars:
     hostname: "{{ cluster_admin_ip }}"
-    username: "{{ ontap_user }}"
+    username: "{{ ontap_user if ontap_user is defined else 'admin' }}"
     password: "{{ ask_password if ask_password is defined else lookup('vars',lookup_password) if lookup_password is defined else ontap_password }}"
     volume: "{{ vol_name if vol_name is defined else 'nfsvol' }}"
     vserver: "{{ svm_name if svm_name is defined else 'svm0' }}"
     snapshot: "{{ 'snapshot_clone_' + ansible_date_time.iso8601_basic_short }}"
-    junction: "{{ junction_path if junction_path is defined else '/oradata' }}"
     clone: "{{ clone_name if clone_name is defined else volume + '_' + ansible_date_time.iso8601_basic_short }}"
+    junction: "{{ junction_path + '/' + clone if junction_path is defined else '/' + clone }}"
   tasks:
     - name: Snapshot Volume
       na_ontap_snapshot:

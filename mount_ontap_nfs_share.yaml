@@ -20,7 +20,7 @@
   name: Mount NFS Volume
   vars:
     hostname: "{{ cluster_admin_ip }}"
-    username: "{{ ontap_user }}"
+    username: "{{ ontap_user if ontap_user is defined else 'admin' }}"
     password: "{{ ask_password if ask_password is defined else lookup('vars',lookup_password) if lookup_password is defined else ontap_password }}"
     aggr: "{{ vol_aggregate if vol_aggregate is defined else 'aggr1' }}"
     volume: "{{ vol_name if vol_name is defined else 'nfsvol' }}"
